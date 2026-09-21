@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
+  // reactCompiler: true, // Only if you have the plugin installed
   async redirects() {
     return [
       {
@@ -15,9 +17,5 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-};
-const nextConfig: NextConfig = {
-  output: 'standalone', // <--- REQUIRED for the Dockerfile above
-  reactCompiler: true,
 };
 export default nextConfig;
