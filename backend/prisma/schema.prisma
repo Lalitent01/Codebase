@@ -1,0 +1,398 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Required for Supabase migrations (port 5432)
+}
+
+model User {
+  id                     String              @id @default(cuid())
+  email                  String              @unique
+  passwordHash           String?
+  username               String              @unique
+  role                   UserRole            @default(USER)
+  createdAt              DateTime            @default(now())
+  bio                    String?             @db.Text
+  avatar                 String?
+  lastActiveAt           DateTime            @default(now())
+  signupProvider         String              @default("email")
+  totalMessages          Int                 @default(0)
+  currentStreak          Int                 @default(0)
+  lastStreakDate         DateTime?
+  queuedPassHours        Int                 @default(0)
+  queuedEnhancedMsgs     Int                 @default(0)
+  walletDaily            Int                 @default(30)
+  walletBonus            Int                 @default(0)
+  lastDailyReset         DateTime            @default(now())
+  walletEnhanced         Int                 @default(0)
+  passExpiry             DateTime?
+  passEnhancedLimit      Int                 @default(0)
+  isEmailVerified        Boolean             @default(false)
+  emailVerificationToken String?             @unique
+  passwordResetToken     String?             @unique
+  passwordResetExpires   DateTime?
+
+  // Ban System
+  isBanned               Boolean             @default(false)
+  banReason              String?             @db.Text
+
+  // Relations
+  likedBots              Like[]
+  followers              Follow[]            @relation("following")
+  following              Follow[]            @relation("follower")
+  inventory              UserInventory[]
+  transactions           Transaction[]
+  characters             Character[]
+  chats                  Chat[]
+  memories               Memory[]
+  reports                Report[]
+  analytics              AnalyticsEvent[]
+  personas               UserPersona[]
+  streakClaims           StreakClaim[]
+  rewardClaims           RewardClaim[]
+  questProgress          UserQuestProgress[]
+}
+
+model Character {
+  id              String          @id @default(cuid())
+  name            String
+  avatar          String?
+  description     String
+  personality     String          @db.Text
+  scenario        String?         @db.Text
+  exampleDialogue String?         @db.Text
+  speakingStyle   String?
+  greeting        String?
+  likesCount      Int             @default(0)
+  tags            String[]
+  chatCount       Int             @default(0)
+  gender          Gender          @default(OTHER)
+  language        Language        @default(ENGLISH)
+  unfiltered      Boolean         @default(false)
+  status          CharacterStatus @default(PRIVATE)
+  adminNote       String?         @db.Text
+  isPublic        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @default(now()) @updatedAt
+  
+  creatorId String
+  creator   User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  likes     Like[]
+  chats     Chat[]
+  memories  Memory[]
+  reports   Report[]
+
+  // GIN index for fast array searching with hasSome
+  @@index([tags], type: Gin)
+  @@index([status])
+}
+
+model Transaction {
+  id                String            @id @default(cuid())
+  userId            String
+  planId            String
+  razorpayOrderId   String            @unique
+  razorpayPaymentId String?           @unique
+  amount            Int
+  status            TransactionStatus @default(PENDING)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@index([userId])
+}
+
+model Chat {
+  id          String    @id @default(cuid())
+  userId      String
+  characterId String
+  summary     String?   @db.Text
+  mood        String    @default("Neutral")
+  affection   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@unique([userId, characterId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  chatId    String
+  content   String   @db.Text
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  // Compound index for instant retrieval of recent chat history
+  @@index([chatId, createdAt])
+}
+
+model UserPersona {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String   @db.Text
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Memory {
+  id          String   @id @default(cuid())
+  content     String   @db.Text
+  userId      String
+  characterId String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([userId, characterId, createdAt])
+}
+
+model RewardTier {
+  id           String     @id @default(cuid())
+  label        String
+  daysRequired Int        @unique
+  rewardType   RewardType @default(CREDITS)
+  creditsGiven Int?
+  lootBoxId    String?
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  
+  claims  RewardClaim[]
+  lootBox LootBox?      @relation(fields: [lootBoxId], references: [id])
+}
+
+model RewardClaim {
+  id        String   @id @default(cuid())
+  userId    String
+  tierId    String
+  claimedAt DateTime @default(now())
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier RewardTier @relation(fields: [tierId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tierId, claimedAt])
+}
+
+model StreakClaim {
+  id        String   @id @default(cuid())
+  userId    String
+  dayNumber Int
+  date      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayNumber])
+}
+
+model Quest {
+  id          String       @id @default(cuid())
+  title       String
+  description String
+  type        QuestType    @default(DAILY)
+  trigger     QuestTrigger @default(MESSAGE_COUNT)
+  goalValue   Int
+  rewardType  RewardType   @default(CREDITS)
+  rewardValue Int
+  lootBoxId   String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+
+  progress UserQuestProgress[]
+  lootBox  LootBox?            @relation(fields: [lootBoxId], references: [id])
+}
+
+model UserQuestProgress {
+  id           String   @id @default(cuid())
+  userId       String
+  questId      String
+  currentValue Int      @default(0)
+  isCompleted  Boolean  @default(false)
+  isClaimed    Boolean  @default(false)
+  updatedAt    DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest Quest @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questId])
+}
+
+model LootBox {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  color       String
+  items       LootItem[]
+  inventory   UserInventory[]
+  rewardTiers RewardTier[]
+  quests      Quest[]
+}
+
+model LootItem {
+  id     String @id @default(cuid())
+  boxId  String
+  label  String
+  type   String
+  value  Int
+  weight Int
+  planId String?
+
+  box  LootBox @relation(fields: [boxId], references: [id], onDelete: Cascade)
+  plan Plan?   @relation(fields: [planId], references: [id])
+}
+
+model UserInventory {
+  id     String @id @default(cuid())
+  userId String
+  boxId  String
+  count  Int    @default(0)
+
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  box  LootBox @relation(fields: [boxId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, boxId])
+}
+
+model Plan {
+  id               String        @id @default(cuid())
+  name             String
+  price            Int
+  type             PlanType
+  totalMessages    Int           @default(0)
+  enhancedMessages Int           @default(0)
+  durationHours    Int           @default(0)
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  transactions     Transaction[]
+  lootItems        LootItem[]
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  reporterId  String
+  characterId String
+  reason      String   @db.Text
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+
+  reporter  User      @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  eventType String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+model SystemConfig {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
+
+model Like {
+  id          String   @id @default(cuid())
+  userId      String
+  characterId String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, characterId])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+}
+
+enum Role {
+  USER
+  ASSISTANT
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum RewardType {
+  CREDITS
+  CHEST
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Language {
+  ENGLISH
+  HINDI
+  HINGLISH
+}
+
+enum CharacterStatus {
+  PRIVATE
+  PENDING
+  PUBLIC
+  REJECTED
+}
+
+enum QuestTrigger {
+  MESSAGE_COUNT
+  UNIQUE_CHARACTERS
+  AFFECTION_REACHED
+  DAILY_LOGIN
+}
+
+enum QuestType {
+  DAILY
+  WEEKLY
+}
+
+enum PlanType {
+  WALLET_PACK
+  TIME_PASS
+}
