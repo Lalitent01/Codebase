@@ -16,5 +16,8 @@ const nextConfig: NextConfig = {
     ];
   },
 };
-
+const nextConfig: NextConfig = {
+  output: 'standalone', // <--- REQUIRED for the Dockerfile above
+  reactCompiler: true,
+};
 export default nextConfig;
