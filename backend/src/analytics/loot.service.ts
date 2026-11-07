@@ -1,16 +1,23 @@
-import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  Inject,
+  forwardRef,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { AnalyticsService } from './analytics.service';
 
 @Injectable()
 export class LootService {
+  private readonly logger = new Logger(LootService.name);
+
   constructor(
-    private prisma: PrismaService,
+    private readonly prisma: PrismaService,
     @Inject(forwardRef(() => AnalyticsService))
-    private analyticsService: AnalyticsService,
+    private readonly analyticsService: AnalyticsService,
   ) {}
 
-  // 1. ADMIN: Create or Update a Box
   async createLootBox(data: { name: string; color: string }) {
     return this.prisma.lootBox.upsert({
       where: { name: data.name },
@@ -22,8 +29,14 @@ export class LootService {
     });
   }
 
-  // 2. ADMIN: Add a single drop item
-  async addLootItem(data: { boxId: string; label: string; type: string; value: number; weight: number; planId?: string }) {
+  async addLootItem(data: {
+    boxId: string;
+    label: string;
+    type: string;
+    value: number;
+    weight: number;
+    planId?: string;
+  }) {
     return this.prisma.lootItem.create({
       data: {
         boxId: data.boxId,
@@ -36,7 +49,6 @@ export class LootService {
     });
   }
 
-  // 3. ADMIN: Get all boxes for the UI
   async getAllBoxes() {
     return this.prisma.lootBox.findMany({
       include: {
@@ -48,7 +60,6 @@ export class LootService {
     });
   }
 
-  // 4. USER: Get personal inventory (The Vault)
   async getUserInventory(userId: string) {
     return this.prisma.userInventory.findMany({
       where: {
@@ -63,7 +74,6 @@ export class LootService {
     });
   }
 
-  // 5. SYSTEM: Add chest to user inventory
   async addChestToInventory(userId: string, boxId: string, count: number = 1, tx?: any) {
     const prisma = tx || this.prisma;
     return prisma.userInventory.upsert({
@@ -73,15 +83,8 @@ export class LootService {
     });
   }
 
-  // 6. USER: The Weighted "Roll" Logic (Updated)
+  // Double-Spend Fixed: Atomic conditional check inside the transaction
   async openChest(userId: string, boxId: string) {
-    const inv = await this.prisma.userInventory.findUnique({
-      where: { userId_boxId: { userId, boxId } },
-    });
-
-    if (!inv || inv.count <= 0) throw new BadRequestException('No chests in vault.');
-
-    // Fetch box and include Plan relations so we know the plan name and duration
     const box = await this.prisma.lootBox.findUnique({
       where: { id: boxId },
       include: {
@@ -91,11 +94,14 @@ export class LootService {
       },
     });
 
-    if (!box || box.items.length === 0) throw new BadRequestException('This chest is currently empty.');
+    if (!box || box.items.length === 0) {
+      throw new BadRequestException('This chest is currently empty or does not exist.');
+    }
 
-    // Weighted Probability Math
     const totalWeight = box.items.reduce((sum, item) => sum + (item.weight || 0), 0);
-    if (totalWeight <= 0) throw new BadRequestException('Chest has no drop chances configured.');
+    if (totalWeight <= 0) {
+      throw new BadRequestException('Chest has no drop chances configured.');
+    }
 
     let random = Math.floor(Math.random() * totalWeight);
     let winningItem = box.items[0];
@@ -109,26 +115,33 @@ export class LootService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // Deduct 1 Box from vault
-      await tx.userInventory.update({
-        where: { id: inv.id },
-        data: { count: { decrement: 1 } },
+      // Atomically decrement box count ONLY if count > 0
+      const deductResult = await tx.userInventory.updateMany({
+        where: {
+          userId,
+          boxId,
+          count: { gt: 0 },
+        },
+        data: {
+          count: { decrement: 1 },
+        },
       });
+
+      if (deductResult.count === 0) {
+        throw new BadRequestException('No chests available in vault.');
+      }
 
       let planName: string | null = null;
 
-      // Dispatch Reward
       if (winningItem.type === 'PLAN' && winningItem.planId) {
         await this.analyticsService.activatePlan(userId, winningItem.planId, true, tx);
         planName = winningItem.plan?.name || 'Time Pass';
-        console.log(`🎁 [CHEST DECRYPTED] User ${userId} opened "${box.name}" and received PLAN: "${planName}"`);
       } else {
         const credits = Number(winningItem.value) || 0;
         await tx.user.update({
           where: { id: userId },
           data: { walletBonus: { increment: credits } },
         });
-        console.log(`🎁 [CHEST DECRYPTED] User ${userId} opened "${box.name}" and received +${credits} CREDITS`);
       }
 
       return {
@@ -141,7 +154,6 @@ export class LootService {
     });
   }
 
-  // 7. ADMIN: Bulk update drop items
   async setLootItems(boxId: string, items: any[]) {
     return this.prisma.$transaction(async (tx) => {
       await tx.lootItem.deleteMany({ where: { boxId } });
@@ -158,7 +170,6 @@ export class LootService {
     });
   }
 
-  // 8. ADMIN: Safe Delete
   async deleteLootBox(id: string) {
     return this.prisma.$transaction(async (tx) => {
       await tx.quest.updateMany({

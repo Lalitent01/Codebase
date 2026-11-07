@@ -5,10 +5,10 @@ import api from '@/lib/axios';
 import Sidebar from '@/components/Sidebar';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
-import { User, Plus, Trash2, Edit2, Sparkles, Loader2 } from 'lucide-react';
+import { User, Plus, Trash2, Edit2, Loader2, Sparkles, Check } from 'lucide-react';
 
 export default function PersonasPage({ hideSidebar = false }: { hideSidebar?: boolean }) {
-  const router = useRouter(); // FIX: Added missing router
+  const router = useRouter();
   const { user } = useAuthStore();
 
   const [personas, setPersonas] = useState<any[]>([]);
@@ -69,7 +69,7 @@ export default function PersonasPage({ hideSidebar = false }: { hideSidebar?: bo
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this identity?')) return;
+    if (!confirm('Are you sure you want to delete this persona?')) return;
     try {
       await api.delete(`/auth/personas/${id}`);
       fetchPersonas();
@@ -79,14 +79,16 @@ export default function PersonasPage({ hideSidebar = false }: { hideSidebar?: bo
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0c] text-white">
+    <div className="flex min-h-screen bg-[#030708] text-white">
       {!hideSidebar && <Sidebar />}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <header className="mb-10 flex justify-between items-center">
+      <main className="flex-1 p-6 md:p-10 overflow-y-auto pb-24">
+        <header className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">My Identities</h1>
-            <p className="text-slate-500 mt-1 text-sm">
-              Manage the personas you use in your stories. ({personas.length}/5 slots used)
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white flex items-center gap-2.5">
+              <Sparkles className="text-[#7be4d5]" size={24} /> My Personas
+            </h1>
+            <p className="text-slate-400 mt-1 text-xs md:text-sm">
+              Define how characters perceive and talk to you ({personas.length}/5 slots used)
             </p>
           </div>
 
@@ -94,46 +96,60 @@ export default function PersonasPage({ hideSidebar = false }: { hideSidebar?: bo
             <button 
               type="button"
               onClick={() => { setIsEditing('new'); setFormData({ name: '', description: '' }); }}
-              className="bg-blue-600 hover:bg-blue-700 px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm cursor-pointer"
+              className="bg-[#7be4d5] hover:bg-[#6bd6c7] text-black px-5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 transition text-xs uppercase tracking-wider cursor-pointer"
             >
-              <Plus size={18} /> Create New
+              <Plus size={16} /> New Persona
             </button>
           )}
         </header>
 
         {/* Editor Form */}
         {isEditing && (
-          <div className="mb-10 bg-[#111318] border border-blue-500/30 p-6 rounded-3xl animate-in fade-in zoom-in duration-200">
-            <h2 className="text-xl font-bold mb-4">{isEditing === 'new' ? 'New Persona' : 'Edit Persona'}</h2>
+          <div className="mb-10 bg-[#0a1013] border border-[#7be4d5]/30 p-6 rounded-3xl animate-in fade-in duration-200 shadow-2xl">
+            <h2 className="text-lg font-bold mb-4 text-white">
+              {isEditing === 'new' ? 'Create Persona' : 'Edit Persona'}
+            </h2>
             <form onSubmit={handleSave} className="space-y-4">
-              <input 
-                placeholder="Persona Name (e.g. Hero, Student, Cyber-Detective)" 
-                className="w-full bg-[#16191f] border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-blue-500 text-sm"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-              <textarea 
-                placeholder="Description (How do you look? What is your personality? Your backstory?)" 
-                rows={4}
-                className="w-full bg-[#16191f] border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-blue-500 text-sm resize-none"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                required
-              />
-              <div className="flex gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Persona Name *
+                </label>
+                <input 
+                  placeholder="e.g. Arjun, Kabir, College Senior, Secret Admirer" 
+                  className="w-full bg-black/60 border border-white/10 p-3.5 rounded-xl text-white outline-none focus:border-[#7be4d5] text-sm"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Backstory & Appearance (How characters should treat you) *
+                </label>
+                <textarea 
+                  placeholder="Describe your appearance, personality, relationship to the character, or temperament..." 
+                  rows={4}
+                  className="w-full bg-black/60 border border-white/10 p-3.5 rounded-xl text-white outline-none focus:border-[#7be4d5] text-sm resize-none leading-relaxed"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
                 <button 
                   type="submit" 
                   disabled={saving}
-                  className="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-xl font-bold text-sm disabled:opacity-50 flex items-center gap-2"
+                  className="bg-[#7be4d5] text-black hover:bg-[#6bd6c7] px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider disabled:opacity-50 flex items-center gap-2"
                 >
-                  {saving && <Loader2 size={16} className="animate-spin" />}
+                  {saving && <Loader2 size={14} className="animate-spin text-black" />}
                   {saving ? 'Saving...' : 'Save Persona'}
                 </button>
                 <button 
                   type="button" 
                   onClick={() => setIsEditing(null)} 
-                  className="bg-white/5 hover:bg-white/10 px-8 py-3 rounded-xl font-bold text-sm"
+                  className="bg-white/5 hover:bg-white/10 px-6 py-2.5 rounded-xl font-bold text-xs text-slate-300 hover:text-white transition"
                 >
                   Cancel
                 </button>
@@ -144,8 +160,8 @@ export default function PersonasPage({ hideSidebar = false }: { hideSidebar?: bo
 
         {loading ? (
           <div className="flex items-center justify-center py-20 text-slate-500 gap-2">
-            <Loader2 size={24} className="animate-spin text-blue-500" />
-            <span>Loading identities...</span>
+            <Loader2 size={24} className="animate-spin text-[#7be4d5]" />
+            <span className="text-xs uppercase tracking-wider font-semibold">Loading personas...</span>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -153,43 +169,46 @@ export default function PersonasPage({ hideSidebar = false }: { hideSidebar?: bo
               <div 
                 key={p.id} 
                 className={`p-6 rounded-3xl border transition-all ${
-                  p.isActive ? 'bg-blue-600/10 border-blue-500/50 shadow-lg shadow-blue-900/20' : 'bg-[#111318] border-white/5'
+                  p.isActive 
+                    ? 'bg-[#0e1a1c] border-[#7be4d5]/40 shadow-lg shadow-[#7be4d5]/5' 
+                    : 'bg-[#0a1013] border-white/[0.06]'
                 }`}
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
-                    <div className={`p-3 rounded-2xl ${p.isActive ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-500'}`}>
-                      <User size={24} />
+                    <div className={`p-3 rounded-2xl ${p.isActive ? 'bg-[#7be4d5] text-black' : 'bg-white/5 text-slate-400'}`}>
+                      <User size={20} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg">{p.name}</h3>
+                      <h3 className="font-bold text-base text-white">{p.name}</h3>
                       {p.isActive && (
-                        <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
-                          Active Identity
+                        <span className="text-[9px] bg-[#7be4d5]/20 text-[#7be4d5] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                          Active In Chat
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <button 
                       type="button"
                       onClick={() => { setIsEditing(p.id); setFormData({ name: p.name, description: p.description }); }} 
-                      className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white"
+                      className="p-2 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition"
                       title="Edit persona"
                     >
-                      <Edit2 size={18} />
+                      <Edit2 size={16} />
                     </button>
                     <button 
                       type="button"
                       onClick={() => handleDelete(p.id)} 
-                      className="p-2 hover:bg-white/5 rounded-lg text-red-500/50 hover:text-red-500"
+                      className="p-2 hover:bg-white/5 rounded-xl text-slate-500 hover:text-rose-400 transition"
                       title="Delete persona"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
-                <p className="text-slate-400 text-sm line-clamp-3 mb-6 leading-relaxed">
+
+                <p className="text-slate-400 text-xs line-clamp-3 mb-6 leading-relaxed">
                   {p.description || 'No backstory provided.'}
                 </p>
                 
@@ -197,9 +216,9 @@ export default function PersonasPage({ hideSidebar = false }: { hideSidebar?: bo
                   <button 
                     type="button"
                     onClick={() => handleSetActive(p.id)}
-                    className="w-full py-3 bg-white/5 hover:bg-white/10 rounded-2xl text-xs font-bold uppercase tracking-widest transition cursor-pointer"
+                    className="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer"
                   >
-                    Switch to this Identity
+                    Select This Persona
                   </button>
                 )}
               </div>
@@ -208,12 +227,12 @@ export default function PersonasPage({ hideSidebar = false }: { hideSidebar?: bo
             {personas.length < 5 && (
               <div 
                 onClick={() => { setIsEditing('new'); setFormData({ name: '', description: '' }); }}
-                className="p-6 rounded-3xl border border-dashed border-white/10 hover:border-blue-500/40 hover:bg-white/[0.02] transition-all flex flex-col items-center justify-center text-center cursor-pointer min-h-[220px]"
+                className="p-6 rounded-3xl border border-dashed border-white/10 hover:border-[#7be4d5]/40 hover:bg-white/[0.02] transition-all flex flex-col items-center justify-center text-center cursor-pointer min-h-[200px]"
               >
-                <Plus className="text-blue-500 mb-2" size={32} />
-                <p className="text-sm font-bold text-slate-300">Add Identity ({personas.length}/5)</p>
+                <Plus className="text-[#7be4d5] mb-2" size={28} />
+                <p className="text-sm font-bold text-slate-300">Add Persona ({personas.length}/5)</p>
                 <p className="text-xs text-slate-500 mt-1 max-w-xs">
-                  Create different personas to roleplay distinct personalities and backgrounds.
+                  Create diverse profiles to roleplay different ages, backgrounds, or relationship dynamics.
                 </p>
               </div>
             )}

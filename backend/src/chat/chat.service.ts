@@ -1,62 +1,80 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { EmbeddingService } from '../ai/embedding.service';
 import { CacheService } from '../cache/cache.service';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
+
   constructor(
-    private prisma: PrismaService,
-    private embeddingService: EmbeddingService,
-    private cacheService: CacheService,
+    private readonly prisma: PrismaService,
+    private readonly embeddingService: EmbeddingService,
+    private readonly cacheService: CacheService,
   ) {}
 
   /**
-   * 1. Find or create a chat session
+   * 1. Find or create a chat session and increment character popularity accurately
    */
-  async findOrCreateChat(userId: string, characterId: string) {
-    const chat = await this.prisma.chat.upsert({
-      where: {
-        userId_characterId: {
-          userId,
-          characterId,
-        },
-      },
-      update: {},
-      create: {
-        userId,
-        characterId,
-      },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
-        },
-      },
+    async findOrCreateChat(userId: string, characterId: string) {
+    const existing = await this.prisma.chat.findUnique({
+      where: { userId_characterId: { userId, characterId } },
+      include: { messages: { orderBy: { createdAt: 'asc' } } },
     });
 
-    let messages = chat.messages;
+    if (existing) {
+      return { chat: existing, messages: existing.messages };
+    }
 
-    // Auto-greeting logic if newly created
-    if (messages.length === 0) {
+    try {
+      // New conversation initiation: create chat and increment chatCount
+      const newChat = await this.prisma.$transaction(async (tx) => {
+        const chat = await tx.chat.create({
+          data: { userId, characterId },
+        });
+
+        await tx.character.update({
+          where: { id: characterId },
+          data: { chatCount: { increment: 1 } },
+        });
+
+        return chat;
+      });
+
+      // Populate default greeting if character has one configured
       const character = await this.prisma.character.findUnique({
         where: { id: characterId },
       });
 
+      let messages: any[] = [];
       if (character?.greeting) {
         const greetingMsg = await this.prisma.message.create({
           data: {
-            chatId: chat.id,
+            chatId: newChat.id,
             role: 'ASSISTANT',
             content: character.greeting,
           },
         });
         messages = [greetingMsg];
       }
+
+      return { chat: newChat, messages };
+    } catch (error: any) {
+      // If a concurrent request created the chat at the exact same moment (P2002), return it
+      if (error?.code === 'P2002') {
+        const concurrentChat = await this.prisma.chat.findUnique({
+          where: { userId_characterId: { userId, characterId } },
+          include: { messages: { orderBy: { createdAt: 'asc' } } },
+        });
+
+        if (concurrentChat) {
+          return { chat: concurrentChat, messages: concurrentChat.messages };
+        }
+      }
+
+      throw error;
     }
-
-    return { chat, messages };
   }
-
   /**
    * 2. Fetch history
    */
@@ -95,29 +113,28 @@ export class ChatService {
     });
 
     if (chat) {
-      await this.cacheService.set(cacheKey, chat, 3600);
+      await this.cacheService.set(cacheKey, chat, 1800); // 30 min TTL
     }
 
     return chat;
   }
 
-  /**
-   * Invalidate cached character/chat data when mood/affection/summary changes
-   */
   async invalidateChatCache(chatId: string) {
     await this.cacheService.del(`chat_char_${chatId}`);
   }
 
   /**
-   * 5. Long-term Memory: Save Facts
+   * 5. Long-term Memory: Save meaningful conversational facts only
    */
   async saveToLongTermMemory(userId: string, characterId: string, content: string) {
+    const clean = content.trim();
+    // Filter out trivial filler messages to prevent DB bloat
+    if (clean.length < 15 || /^(hi|hey|hello|ok|yes|no|bye|lol|sure)$/i.test(clean)) {
+      return null;
+    }
+
     return this.prisma.memory.create({
-      data: {
-        content,
-        userId,
-        characterId,
-      },
+      data: { content: clean, userId, characterId },
     });
   }
 
@@ -129,27 +146,22 @@ export class ChatService {
       const chats = await this.prisma.chat.findMany({
         where: { userId },
         orderBy: { updatedAt: 'desc' },
-        distinct: ['characterId'],
-        take: 7,
+        take: 10,
         include: {
           character: {
-            select: {
-              id: true,
-              name: true,
-              avatar: true,
-            },
+            select: { id: true, name: true, avatar: true },
           },
         },
       });
       return chats.filter((c) => c.character !== null);
-    } catch (error) {
-      console.error('Database error in Sidebar fetch:', error);
+    } catch (error: any) {
+      this.logger.error(`Failed to fetch sidebar chats: ${error.message}`);
       return [];
     }
   }
 
   /**
-   * 7. The Unified Deduction Waterfall
+   * 7. Race-Condition Proof Credit Deduction Waterfall
    */
   async deductCredit(userId: string): Promise<{ success: boolean; fidelity: 'STANDARD' | 'ENHANCED' }> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -157,42 +169,43 @@ export class ChatService {
 
     const now = new Date();
 
-    // 1. Pass Expiry Check (Unlimited standard, smart enhanced quota)
+    // 1. Time Pass Holder: Unlimited standard, limited enhanced
     if (user.passExpiry && new Date(user.passExpiry) > now) {
-      if ((user.passEnhancedLimit || 0) > 0) {
-        await this.prisma.user.update({
-          where: { id: userId },
-          data: { passEnhancedLimit: { decrement: 1 } },
-        });
+      const enhancedUpdate = await this.prisma.user.updateMany({
+        where: { id: userId, passEnhancedLimit: { gt: 0 } },
+        data: { passEnhancedLimit: { decrement: 1 } },
+      });
+
+      if (enhancedUpdate.count > 0) {
         return { success: true, fidelity: 'ENHANCED' };
       }
       return { success: true, fidelity: 'STANDARD' };
     }
 
-    // 2. Daily Allowance (Standard)
-    if ((user.walletDaily || 0) > 0) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { walletDaily: { decrement: 1 } },
-      });
+    // 2. Daily Free Energy Allowance (Atomic)
+    const dailyUpdate = await this.prisma.user.updateMany({
+      where: { id: userId, walletDaily: { gt: 0 } },
+      data: { walletDaily: { decrement: 1 } },
+    });
+    if (dailyUpdate.count > 0) {
       return { success: true, fidelity: 'STANDARD' };
     }
 
-    // 3. Bonus Bank (Standard)
-    if ((user.walletBonus || 0) > 0) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { walletBonus: { decrement: 1 } },
-      });
+    // 3. Bonus Reward Credits (Atomic)
+    const bonusUpdate = await this.prisma.user.updateMany({
+      where: { id: userId, walletBonus: { gt: 0 } },
+      data: { walletBonus: { decrement: 1 } },
+    });
+    if (bonusUpdate.count > 0) {
       return { success: true, fidelity: 'STANDARD' };
     }
 
-    // 4. Enhanced Wallet (Enhanced)
-    if ((user.walletEnhanced || 0) > 0) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { walletEnhanced: { decrement: 1 } },
-      });
+    // 4. Enhanced Purchased Wallet (Atomic)
+    const enhancedWalletUpdate = await this.prisma.user.updateMany({
+      where: { id: userId, walletEnhanced: { gt: 0 } },
+      data: { walletEnhanced: { decrement: 1 } },
+    });
+    if (enhancedWalletUpdate.count > 0) {
       return { success: true, fidelity: 'ENHANCED' };
     }
 
@@ -217,7 +230,12 @@ export class ChatService {
     });
   }
 
-  async retrieveRelevantMemories(userId: string, characterId: string, queryText: string, limit: number = 3) {
+  async retrieveRelevantMemories(
+    userId: string,
+    characterId: string,
+    _queryText: string,
+    limit: number = 3,
+  ) {
     const memories = await this.prisma.memory.findMany({
       where: { userId, characterId },
       take: limit,

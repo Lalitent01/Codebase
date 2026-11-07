@@ -1,9 +1,21 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { CacheService } from '../cache/cache.service';
 
 @Injectable()
 export class CharactersService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(CharactersService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cacheService: CacheService,
+  ) {}
 
   async create(userId: string, data: any) {
     const requiredFields = [
@@ -14,19 +26,24 @@ export class CharactersService {
     ];
 
     for (const field of requiredFields) {
-      if (!data[field.key] || data[field.key].trim() === '') {
+      if (!data[field.key] || typeof data[field.key] !== 'string' || data[field.key].trim() === '') {
         throw new BadRequestException(`${field.label} is mandatory.`);
       }
     }
 
-    const tags = Array.isArray(data.tags) ? data.tags : data.tags ? [data.tags] : [];
+    const tags = Array.isArray(data.tags)
+      ? data.tags.map((t: string) => t.trim().toLowerCase()).filter(Boolean)
+      : data.tags
+      ? [data.tags.trim().toLowerCase()]
+      : [];
+
     if (tags.length === 0) {
       throw new BadRequestException('At least one tag is required.');
     }
 
     const initialStatus = data.isPublicRequest ? 'PENDING' : 'PRIVATE';
 
-    return this.prisma.character.create({
+    const character = await this.prisma.character.create({
       data: {
         name: data.name.trim(),
         description: data.description.trim(),
@@ -45,6 +62,10 @@ export class CharactersService {
         creatorId: userId,
       },
     });
+
+    await this.cacheService.delByPattern('discovery:*');
+
+    return character;
   }
 
   async update(id: string, userId: string, data: any) {
@@ -52,29 +73,32 @@ export class CharactersService {
     if (!character) throw new NotFoundException('Character not found');
     if (character.creatorId !== userId) throw new ForbiddenException('You do not own this character');
 
-    // Only modify status if the user explicitly requested a change in visibility
     let newStatus = character.status;
     if (data.isPublicRequest !== undefined) {
-      if (character.status === 'PUBLIC' || character.status === 'REJECTED') {
-        newStatus = data.isPublicRequest ? 'PENDING' : 'PRIVATE';
-      } else if (character.status === 'PRIVATE' && data.isPublicRequest) {
+      if (character.status === 'PRIVATE' && data.isPublicRequest) {
+        newStatus = 'PENDING';
+      } else if (!data.isPublicRequest) {
+        newStatus = 'PRIVATE';
+      } else if (character.status === 'REJECTED' && data.isPublicRequest) {
         newStatus = 'PENDING';
       }
     }
 
-    const tags = Array.isArray(data.tags) ? data.tags : data.tags ? [data.tags] : character.tags;
+    const tags = Array.isArray(data.tags)
+      ? data.tags.map((t: string) => t.trim().toLowerCase()).filter(Boolean)
+      : character.tags;
 
-    return this.prisma.character.update({
+    const updated = await this.prisma.character.update({
       where: { id },
       data: {
-        name: data.name !== undefined ? data.name : character.name,
-        description: data.description !== undefined ? data.description : character.description,
-        personality: data.personality !== undefined ? data.personality : character.personality,
+        name: data.name !== undefined ? data.name.trim() : character.name,
+        description: data.description !== undefined ? data.description.trim() : character.description,
+        personality: data.personality !== undefined ? data.personality.trim() : character.personality,
         avatar: data.avatar !== undefined ? data.avatar : character.avatar,
-        greeting: data.greeting !== undefined ? data.greeting : character.greeting,
-        scenario: data.scenario !== undefined ? data.scenario : character.scenario,
-        speakingStyle: data.speakingStyle !== undefined ? data.speakingStyle : character.speakingStyle,
-        exampleDialogue: data.exampleDialogue !== undefined ? data.exampleDialogue : character.exampleDialogue,
+        greeting: data.greeting !== undefined ? data.greeting.trim() : character.greeting,
+        scenario: data.scenario !== undefined ? data.scenario?.trim() : character.scenario,
+        speakingStyle: data.speakingStyle !== undefined ? data.speakingStyle?.trim() : character.speakingStyle,
+        exampleDialogue: data.exampleDialogue !== undefined ? data.exampleDialogue?.trim() : character.exampleDialogue,
         tags,
         gender: data.gender !== undefined ? data.gender : character.gender,
         language: data.language !== undefined ? data.language : character.language,
@@ -83,6 +107,11 @@ export class CharactersService {
         isPublic: newStatus === 'PUBLIC',
       },
     });
+
+    await this.cacheService.del(`character:${id}`);
+    await this.cacheService.delByPattern('discovery:*');
+
+    return updated;
   }
 
   async remove(id: string, userId: string) {
@@ -90,15 +119,20 @@ export class CharactersService {
     if (!character) throw new NotFoundException('Character not found');
     if (character.creatorId !== userId) throw new ForbiddenException('You do not own this character');
 
-    // Clean up related relations in a transaction to prevent orphaned rows or FK errors
     return this.prisma.$transaction(async (tx) => {
       await tx.message.deleteMany({ where: { chat: { characterId: id } } });
       await tx.chat.deleteMany({ where: { characterId: id } });
       await tx.like.deleteMany({ where: { characterId: id } });
-      return tx.character.delete({ where: { id } });
+      const deleted = await tx.character.delete({ where: { id } });
+
+      await this.cacheService.del(`character:${id}`);
+      await this.cacheService.delByPattern('discovery:*');
+
+      return deleted;
     });
   }
-async getDiscovery(query: {
+
+  async getDiscovery(query: {
     userId?: string | null;
     tags?: string[];
     search?: string;
@@ -109,27 +143,45 @@ async getDiscovery(query: {
     page?: number;
     limit?: number;
   }) {
-    const { 
-      userId, 
-      tags, 
-      search, 
-      sort, 
-      gender, 
-      language, 
-      unfiltered, 
-      page = 1, 
-      limit = 12 
+    const {
+      userId,
+      tags,
+      search,
+      sort = 'new', // Default to 'new' universal chronological feed
+      gender,
+      language,
+      unfiltered = false, // Defaults strictly to SFW (false) unless explicitly requested
+      page = 1,
+      limit = 12,
     } = query;
 
-    const where: any = { status: 'PUBLIC' };
+    const parsedLimit = Math.min(Math.max(1, Number(limit) || 12), 50);
+    const parsedPage = Math.max(1, Number(page) || 1);
+    const offset = (parsedPage - 1) * parsedLimit;
+
+    // Strict boolean check: 18+ items are filtered out in standard SFW mode
+    const isUnfilteredQuery = Boolean(unfiltered);
+
+    // Cache key for standard non-personalized queries
+    const isStandardQuery = !search && (sort !== 'recommended' || !userId);
+    const cacheKey = `discovery:${sort}:${gender}:${language}:${isUnfilteredQuery}:${tags?.join(',')}:${parsedPage}:${parsedLimit}`;
+
+    if (isStandardQuery) {
+      const cached = await this.cacheService.get(cacheKey);
+      if (cached) return cached;
+    }
+
+    const where: any = { 
+      status: 'PUBLIC',
+      unfiltered: isUnfilteredQuery, // Always enforce true or false
+    };
 
     if (gender && gender !== 'ALL') where.gender = gender;
     if (language && language !== 'ALL') where.language = language;
-    if (unfiltered !== undefined) where.unfiltered = unfiltered;
     if (tags && tags.length > 0) where.tags = { hasSome: tags };
 
     if (search) {
-      const s = search.toLowerCase();
+      const s = search.toLowerCase().trim();
       where.OR = [
         { name: { contains: s, mode: 'insensitive' } },
         { description: { contains: s, mode: 'insensitive' } },
@@ -137,99 +189,116 @@ async getDiscovery(query: {
       ];
     }
 
-    // 1. Total matching count for pagination
     const totalCount = await this.prisma.character.count({ where });
-    const parsedLimit = Math.max(1, Number(limit) || 12);
-    const parsedPage = Math.max(1, Number(page) || 1);
     const totalPages = Math.max(1, Math.ceil(totalCount / parsedLimit));
 
-    // 2. Fetch characters matching filter criteria
-    const results = await this.prisma.character.findMany({
-      where,
-      include: { creator: { select: { username: true } } },
-    });
+    let paginatedCharacters: any[] = [];
 
-    // 3. User personalized recommendations logic
-    let userPreferredTags: string[] = [];
-    const activeSort = !userId && sort === 'recommended' ? 'top' : sort || 'recommended';
+    // DATABASE-LEVEL PAGINATION: Use native Postgres ordering for top and new queries
+    if (!search && (sort === 'new' || sort === 'top' || (!userId && sort === 'recommended'))) {
+      const orderBy = sort === 'new' || (!userId && sort === 'recommended')
+        ? { createdAt: 'desc' as const } 
+        : { chatCount: 'desc' as const };
 
-    if (userId && activeSort === 'recommended') {
-      try {
-        const recentEvents = await this.prisma.analyticsEvent.findMany({
-          where: { userId, eventType: 'CHAT_MESSAGE' },
-          take: 15,
-          orderBy: { createdAt: 'desc' },
-        });
+      paginatedCharacters = await this.prisma.character.findMany({
+        where,
+        skip: offset,
+        take: parsedLimit,
+        orderBy,
+        include: { creator: { select: { username: true } } },
+      });
+    } else {
+      // PERSONALIZED / SEARCH RANKING: Bounded pool to preserve memory
+      const candidates = await this.prisma.character.findMany({
+        where,
+        take: 150,
+        orderBy: { chatCount: 'desc' },
+        include: { creator: { select: { username: true } } },
+      });
 
-        const interactedIds = recentEvents.map((e) => (e.metadata as any)?.characterId).filter(Boolean);
-        if (interactedIds.length > 0) {
-          const lastChars = await this.prisma.character.findMany({
-            where: { id: { in: interactedIds } },
-            select: { tags: true },
+      let userPreferredTags: string[] = [];
+      if (userId && sort === 'recommended') {
+        try {
+          const recentEvents = await this.prisma.analyticsEvent.findMany({
+            where: { userId, eventType: 'CHAT_MESSAGE' },
+            take: 15,
+            orderBy: { createdAt: 'desc' },
           });
-          userPreferredTags = [...new Set(lastChars.flatMap((c) => c.tags))];
+
+          const interactedIds = recentEvents
+            .map((e) => (e.metadata as any)?.characterId)
+            .filter(Boolean);
+
+          if (interactedIds.length > 0) {
+            const lastChars = await this.prisma.character.findMany({
+              where: { id: { in: interactedIds } },
+              select: { tags: true },
+            });
+            userPreferredTags = [...new Set(lastChars.flatMap((c) => c.tags))];
+          }
+        } catch (e: any) {
+          this.logger.warn(`Recommendation fallback triggered: ${e.message}`);
         }
-      } catch (e) {
-        console.error('Personalization fallback to global sort', e);
-      }
-    }
-
-    // 4. In-memory ranking and sorting
-    const sorted = results.sort((a, b) => {
-      const s = search?.toLowerCase() || '';
-
-      if (search) {
-        const getScore = (c: any) => {
-          let score = 0;
-          const name = c.name.toLowerCase();
-          if (name === s) score += 1000;
-          else if (name.includes(s)) score += 500;
-          score += c.tags.filter((t: string) => t.toLowerCase().includes(s)).length * 100;
-          return score;
-        };
-        return getScore(b) - getScore(a);
       }
 
-      if (activeSort === 'new') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      if (activeSort === 'top') return (b.chatCount || 0) - (a.chatCount || 0);
+      const sorted = candidates.sort((a, b) => {
+        if (search) {
+          const s = search.toLowerCase().trim();
+          const getScore = (c: any) => {
+            let score = 0;
+            const name = c.name.toLowerCase();
+            if (name === s) score += 1000;
+            else if (name.includes(s)) score += 500;
+            score += c.tags.filter((t: string) => t.toLowerCase().includes(s)).length * 100;
+            return score;
+          };
+          return getScore(b) - getScore(a);
+        }
 
-      if (activeSort === 'recommended') {
         const matchA = a.tags.filter((t: any) => userPreferredTags.includes(t)).length;
         const matchB = b.tags.filter((t: any) => userPreferredTags.includes(t)).length;
         if (matchA === matchB) return (b.chatCount || 0) - (a.chatCount || 0);
         return matchB - matchA;
-      }
+      });
 
-      return 0;
-    });
+      paginatedCharacters = sorted.slice(offset, offset + parsedLimit);
+    }
 
-    // 5. Slice exactly 12 items for the requested page
-    const offset = (parsedPage - 1) * parsedLimit;
-    const paginatedCharacters = sorted.slice(offset, offset + parsedLimit);
-
-    return {
+    const payload = {
       characters: paginatedCharacters,
       totalCount,
       totalPages,
       currentPage: parsedPage,
     };
-  }
 
-  async findOne(id: string) {
-    const character = await this.prisma.character.findUnique({
-      where: { id },
-      include: { creator: { select: { username: true } } },
-    });
-
-    if (!character) {
-      throw new NotFoundException('Character not found');
+    if (isStandardQuery) {
+      await this.cacheService.set(cacheKey, payload, 45); // 45s TTL
     }
 
-    // Increment chat count non-blockingly
-    await this.prisma.character.update({
-      where: { id },
-      data: { chatCount: { increment: 1 } },
-    });
+    return payload;
+  }
+
+  async findOne(id: string, requestingUserId?: string | null) {
+    const cacheKey = `character:${id}`;
+
+    let character = await this.cacheService.get(cacheKey);
+
+    if (!character) {
+      character = await this.prisma.character.findUnique({
+        where: { id },
+        include: { creator: { select: { username: true } } },
+      });
+
+      if (!character) throw new NotFoundException('Character not found');
+
+      if (character.status === 'PUBLIC') {
+        await this.cacheService.set(cacheKey, character, 300);
+      }
+    }
+
+    if (character.status !== 'PUBLIC' && character.creatorId !== requestingUserId) {
+      throw new NotFoundException('Character not found');
+    }
 
     return character;
   }
@@ -268,23 +337,30 @@ async getDiscovery(query: {
     });
 
     if (existingLike) {
-      await this.prisma.$transaction([
-        this.prisma.like.delete({ where: { id: existingLike.id } }),
-        this.prisma.character.update({
-          where: { id: characterId },
-          data: { likesCount: { decrement: 1 } },
-        }),
-      ]);
+      try {
+        await this.prisma.$transaction([
+          this.prisma.like.delete({ where: { id: existingLike.id } }),
+          this.prisma.character.update({
+            where: { id: characterId },
+            data: { likesCount: { decrement: 1 } },
+          }),
+        ]);
+      } catch {}
       return { liked: false };
     } else {
-      await this.prisma.$transaction([
-        this.prisma.like.create({ data: { userId, characterId } }),
-        this.prisma.character.update({
-          where: { id: characterId },
-          data: { likesCount: { increment: 1 } },
-        }),
-      ]);
-      return { liked: true };
+      try {
+        await this.prisma.$transaction([
+          this.prisma.like.create({ data: { userId, characterId } }),
+          this.prisma.character.update({
+            where: { id: characterId },
+            data: { likesCount: { increment: 1 } },
+          }),
+        ]);
+        return { liked: true };
+      } catch (err: any) {
+        if (err.code === 'P2002') return { liked: true };
+        throw err;
+      }
     }
   }
 
@@ -299,11 +375,18 @@ async getDiscovery(query: {
     });
 
     if (existingFollow) {
-      await this.prisma.follow.delete({ where: { id: existingFollow.id } });
+      try {
+        await this.prisma.follow.delete({ where: { id: existingFollow.id } });
+      } catch {}
       return { followed: false };
     } else {
-      await this.prisma.follow.create({ data: { followerId, followingId } });
-      return { followed: true };
+      try {
+        await this.prisma.follow.create({ data: { followerId, followingId } });
+        return { followed: true };
+      } catch (err: any) {
+        if (err.code === 'P2002') return { followed: true };
+        throw err;
+      }
     }
   }
 

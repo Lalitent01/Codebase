@@ -8,96 +8,79 @@ export default function TermsPage() {
       <div className="space-y-10 pb-20">
         
         {/* INTRODUCTION */}
-        <section className="bg-blue-600/5 border border-blue-600/10 p-6 rounded-3xl">
-          <p className="text-slate-300 leading-relaxed">
-            Welcome to <strong className="text-white font-bold">Suroor</strong> (&ldquo;Suroor&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;us&rdquo;). These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of the Suroor website, applications, AI characters, creator tools, and related services.
+        <section className="bg-[#7be4d5]/5 border border-[#7be4d5]/15 p-6 rounded-3xl">
+          <p className="text-slate-300 leading-relaxed text-sm md:text-base">
+            Welcome to <strong className="text-white">Suroor AI</strong> (&ldquo;Suroor&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;). These Terms of Service govern your use of the Suroor platform, AI character creation features, roleplay experiences, and digital purchases.
           </p>
-          <p className="mt-4 text-slate-300">
-            By creating an account or using the Service, you agree to be bound by these Terms. If you do not agree, you must not use the Service.
+          <p className="mt-3 text-slate-400 text-xs md:text-sm">
+            By creating an account or accessing the service, you agree to comply with these terms.
           </p>
         </section>
 
-        {/* 1. ELIGIBILITY */}
-        <Section num="01" title="Eligibility">
-          <p>You must be at least <strong className="text-white font-bold">18 years old</strong> to create an account or use the Service.</p>
-          <p className="mt-2">By using Suroor, you represent and warrant that:</p>
-          <ul className="list-disc pl-6 mt-2 space-y-1">
-            <li>You are at least 18 years of age.</li>
-            <li>You have the legal capacity to enter into this agreement.</li>
-            <li>All information you provide is accurate and current.</li>
-          </ul>
-          <p className="mt-2">We reserve the right to suspend or permanently terminate accounts that violate this requirement.</p>
-        </Section>
-
-        {/* 2. YOUR ACCOUNT */}
-        <Section num="02" title="Your Account">
-          <p>You are responsible for maintaining the security of your account and password.</p>
-          <p className="mt-2">You agree to:</p>
-          <ul className="list-disc pl-6 mt-2 space-y-1">
-            <li>Keep your login credentials confidential.</li>
-            <li>Notify us immediately of any unauthorized access.</li>
-            <li>Be responsible for all activities conducted through your account.</li>
+        {/* 1. ELIGIBILITY (18+) */}
+        <Section num="01" title="Age Eligibility (Strict 18+)">
+          <p>You must be at least <strong className="text-white">18 years of age</strong> to register or converse on Suroor.</p>
+          <p className="mt-2">By using the platform, you represent and warrant that:</p>
+          <ul className="list-disc pl-6 mt-2 space-y-1 text-xs text-slate-300">
+            <li>You are at least 18 years old.</li>
+            <li>You possess full legal capacity to enter into this binding agreement.</li>
+            <li>Your account registration details are accurate.</li>
           </ul>
         </Section>
 
-        {/* 3. AI DISCLAIMER */}
-        <Section num="03" title="AI Disclaimer">
-          <p>Suroor uses artificial intelligence to generate responses. You acknowledge that:</p>
-          <ul className="list-disc pl-6 mt-2 space-y-1 text-amber-200/70">
-            <li>AI responses are generated automatically and may produce fictional information.</li>
-            <li>AI conversations do not represent real human opinions or advice.</li>
-            <li>AI should never be relied upon for medical, legal, financial, or emergency advice.</li>
+        {/* 2. USER CONDUCT & PROHIBITED CONTENT */}
+        <Section num="02" title="Prohibited Content" color="text-rose-400" bg="bg-rose-500/5" border="border-rose-500/20">
+          <p className="text-xs md:text-sm text-slate-300 mb-3">
+            Suroor allows mature and uncensored fictional roleplay. However, the following content categories are strictly illegal and forbidden across all modes:
+          </p>
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-rose-200/80 font-medium">
+            <li className="bg-black/40 p-2.5 rounded-xl border border-white/5">• Any depiction of minors or child sexual abuse (CSAM)</li>
+            <li className="bg-black/40 p-2.5 rounded-xl border border-white/5">• Non-consensual sexual violence or assault</li>
+            <li className="bg-black/40 p-2.5 rounded-xl border border-white/5">• Real-world suicide or self-harm encouragement</li>
+            <li className="bg-black/40 p-2.5 rounded-xl border border-white/5">• Terrorist acts or violent extremist manifestos</li>
           </ul>
-        </Section>
-
-        {/* 4. VIRTUAL CREDITS AND PURCHASES */}
-        <Section num="04" title="Virtual Credits and Purchases">
-          <p>Suroor offers virtual credits and Time Passes for accessing premium features.</p>
-          <p className="mt-2 font-bold text-white">These virtual items:</p>
-          <ul className="list-disc pl-6 space-y-1">
-            <li>Have no real-world monetary value.</li>
-            <li>Are non-transferable between accounts.</li>
-            <li>Cannot be exchanged for cash.</li>
-          </ul>
-        </Section>
-
-        {/* 5. PROHIBITED CONTENT */}
-        <Section num="05" title="Prohibited Content" color="text-red-500" bg="bg-red-500/5" border="border-red-500/20">
-          <p>You may not create, upload, or request content involving:</p>
-          <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 list-disc pl-6 mt-2 text-red-200/70 text-xs uppercase font-bold tracking-tight">
-            <li>Sexual content involving minors</li>
-            <li>Child exploitation or abuse</li>
-            <li>Non-consensual sexual activity</li>
-            <li>Terrorism or violent extremism</li>
-            <li>Instructions for self-harm or violence</li>
-            <li>Copyright infringement or fraud</li>
-          </ul>
-          <p className="mt-4 text-white font-bold">Violations will result in immediate permanent suspension.</p>
-        </Section>
-
-        {/* 6. GOVERNING LAW */}
-        <Section num="06" title="Governing Law">
-          <p>
-            These Terms shall be governed by and construed in accordance with the laws of <strong className="text-white font-bold">India</strong>, without regard to conflict of law principles.
+          <p className="mt-4 text-xs font-bold text-white">
+            Violations will trigger immediate permanent account suspension and statutory reporting where required.
           </p>
         </Section>
 
-        <footer className="pt-10 border-t border-white/5 text-center">
-          <p className="text-[10px] text-slate-600 font-black uppercase tracking-[0.4em]">End of Protocol</p>
+        {/* 3. AI FICTIONAL DISCLAIMER */}
+        <Section num="03" title="AI Fiction & Nature of Output">
+          <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+            All character personalities, dialogue, and narrative events generated on Suroor are creative fiction produced by artificial intelligence. They do not reflect real human individuals or real-world events. AI outputs must never be relied upon for medical, legal, psychological, or financial counsel.
+          </p>
+        </Section>
+
+        {/* 4. USER-GENERATED CHARACTERS */}
+        <Section num="04" title="Creator Content & Intellectual Property">
+          <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+            You retain ownership of the original prompts, descriptions, and personas you write. By making a character public on Suroor, you grant us a non-exclusive license to host, display, and run AI inferences based on that persona.
+          </p>
+        </Section>
+
+        {/* 5. GOVERNING LAW & JURISDICTION */}
+        <Section num="05" title="Governing Law">
+          <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+            These Terms are governed by the laws of <strong className="text-white">India</strong>. Any legal dispute or claim arising from your use of Suroor shall be subject to the exclusive jurisdiction of the competent courts in India.
+          </p>
+        </Section>
+
+        <footer className="pt-8 border-t border-white/[0.08] text-center">
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Suroor Terms of Service Enforced</p>
         </footer>
       </div>
     </LegalLayout>
   );
 }
 
-function Section({ num, title, children, color = "text-blue-500", bg = "bg-[#0a0a0c]", border = "border-white/5" }: any) {
+function Section({ num, title, children, color = "text-[#7be4d5]", bg = "bg-[#0a1013]", border = "border-white/[0.06]" }: any) {
   return (
-    <section className={`p-8 rounded-[2rem] border ${border} ${bg} transition-all hover:border-white/10`}>
-      <div className="flex items-center gap-4 mb-6">
-        <span className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-black text-sm ${color}`}>{num}</span>
-        <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">{title}</h2>
+    <section className={`p-6 md:p-8 rounded-3xl border ${border} ${bg} transition-all`}>
+      <div className="flex items-center gap-3.5 mb-4">
+        <span className={`w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center font-bold text-xs ${color}`}>{num}</span>
+        <h2 className="text-lg md:text-xl font-bold tracking-tight text-white">{title}</h2>
       </div>
-      <div className="text-slate-400 text-sm leading-relaxed space-y-2">
+      <div className="text-slate-300 text-xs md:text-sm leading-relaxed space-y-2">
         {children}
       </div>
     </section>

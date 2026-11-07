@@ -1,20 +1,32 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
+import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private usersService: UsersService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    configService: ConfigService,
+  ) {
+    const secret = configService.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new Error('JWT_SECRET must be defined');
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'fallbackSecret',
+      secretOrKey: secret,
     });
   }
 
-  async validate(payload: any) {
-    const user = await this.usersService.findOneByEmail(payload.email);
+  async validate(payload: { sub: string; email: string }) {
+    // Lookup by primary key ID (payload.sub) for better indexing and performance
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
 
     if (!user) {
       throw new UnauthorizedException('User no longer exists');
@@ -22,7 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (user.isBanned) {
       throw new UnauthorizedException(
-        'Your account has been suspended. Reason: ' + (user.banReason || 'Policy Violation'),
+        user.banReason ? `Account suspended: ${user.banReason}` : 'Your account has been suspended.',
       );
     }
 

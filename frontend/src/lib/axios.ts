@@ -1,7 +1,11 @@
 import axios from 'axios';
 
-// Normalize base URL to prevent double slashes
-const rawBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
+// Normalize base URL checking both standard environment variable keys
+const rawBase = 
+  process.env.NEXT_PUBLIC_API_URL || 
+  process.env.NEXT_PUBLIC_API_BASE_URL || 
+  'http://localhost:3001/api';
+
 const baseURL = rawBase.replace(/\/$/, '');
 
 const api = axios.create({
@@ -11,7 +15,7 @@ const api = axios.create({
   },
 });
 
-// Request Interceptor: Attach JWT token if running on client
+// Request Interceptor: Attach JWT bearer token if running in browser
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('token');
@@ -22,14 +26,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response Interceptor: Handle 401 Unauthorized cleanly
+// Response Interceptor: Handle 401 Unauthorized without crashing public views
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (typeof window !== 'undefined' && error.response?.status === 401) {
       const pathname = window.location.pathname;
 
-      // Do NOT redirect if the user is already on auth pages or public pages
+      // Do NOT redirect if the user is already on public or auth routes
       const isAuthPage = pathname.startsWith('/auth/');
       const isPublicRoute = 
         pathname === '/' || 
@@ -38,6 +42,7 @@ api.interceptors.response.use(
         pathname === '/contact' ||
         pathname === '/terms' ||
         pathname === '/privacy' ||
+        pathname === '/refund-policy' ||
         pathname.startsWith('/character/') ||
         pathname.startsWith('/creator/') ||
         isAuthPage;

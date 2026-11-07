@@ -15,130 +15,132 @@ import {
 
 export default function ContactGrievancePage() {
   return (
-    <LegalLayout title="Contact & Grievance" lastUpdated="July 2, 2026">
+    <LegalLayout title="Contact & Grievance Redressal" lastUpdated="July 2, 2026">
       <div className="space-y-10 pb-20">
         
         {/* INTRODUCTION */}
-        <section className="bg-indigo-600/5 border border-indigo-600/10 p-6 rounded-3xl">
-          <p className="text-slate-300 leading-relaxed text-center">
-            We&apos;re here to help. If you have questions, feedback, or need assistance with your <strong className="text-white font-bold">Suroor</strong> account, please contact us using the specialized channels below.
+        <section className="bg-[#7be4d5]/5 border border-[#7be4d5]/15 p-6 rounded-3xl">
+          <p className="text-slate-300 leading-relaxed text-center text-sm md:text-base">
+            We are committed to user trust, safety, and rapid resolution of questions. If you have inquiries, need payment assistance, or wish to submit feedback regarding your <strong className="text-white font-bold">Suroor AI</strong> experience, please use the channels below.
           </p>
         </section>
 
         {/* 01. CUSTOMER SUPPORT */}
-        <Section num="01" title="Customer Support" icon={<LifeBuoy size={20} />} color="text-indigo-400">
-          <p className="mb-4">For general inquiries, technical issues, payment questions, or account assistance:</p>
+        <Section num="01" title="Customer Support" icon={<LifeBuoy size={20} />} color="text-[#7be4d5]">
+          <p className="mb-4">
+            For general questions, billing inquiries (Razorpay/UPI issues), account verification, or platform assistance:
+          </p>
           <a 
             href="mailto:support@suroor.cc" 
-            className="group flex items-center justify-between bg-white/5 border border-white/10 p-4 rounded-2xl hover:bg-indigo-500/10 transition-all"
+            className="group flex items-center justify-between bg-black/40 border border-white/10 p-4 rounded-2xl hover:border-[#7be4d5]/40 transition-all"
           >
             <div className="flex items-center gap-3">
-              <Mail className="text-indigo-400" size={18} />
-              <span className="text-white font-bold tracking-tight">support@suroor.cc</span>
+              <Mail className="text-[#7be4d5]" size={18} />
+              <span className="text-white font-semibold tracking-tight text-sm">support@suroor.cc</span>
             </div>
-            <Send size={16} className="text-slate-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+            <Send size={15} className="text-slate-400 group-hover:text-[#7be4d5] group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
           </a>
-          <p className="mt-4 text-xs text-slate-500 italic">
-            Our support team aims to respond within 24–48 business hours.
+          <p className="mt-4 text-xs text-slate-400">
+            Our support desk responds to all inquiries within 24 to 48 business hours.
           </p>
         </Section>
 
-        {/* 02. GRIEVANCE OFFICER & LEGAL (Required for IT Rules / Razorpay) */}
+        {/* 02. GRIEVANCE OFFICER & STATUTORY REDRESSAL (IT Rules 2021 / Razorpay Compliance) */}
         <Section num="02" title="Grievance Officer" icon={<Gavel size={20} />} color="text-amber-400">
-          <p className="mb-6">
-            In accordance with the Information Technology Act, 2000 and rules made thereunder, the name and contact details of the Grievance Officer are provided below:
+          <p className="mb-5">
+            In accordance with the <strong>Information Technology Act, 2000</strong> and the <strong>Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021</strong>, the contact details of the designated Grievance Officer are set forth below:
           </p>
           
-          <div className="bg-[#0f0f12] border border-white/5 rounded-2xl p-6 space-y-4">
+          <div className="bg-black/40 border border-white/10 rounded-2xl p-6 space-y-4">
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Officer Name</p>
-              {/* Replace with your name or designated support lead */}
-              <p className="text-white font-bold">Lokesh Deshpande</p>
+              <p className="text-[10px] uppercase tracking-widest text-slate-400 mb-1 font-semibold">Grievance Officer Name</p>
+              <p className="text-white font-bold text-sm">Lokesh Deshpande</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Official Grievance Email</p>
-              <a href="mailto:grievance@suroor.cc" className="text-amber-400 hover:underline font-bold">
+              <p className="text-[10px] uppercase tracking-widest text-slate-400 mb-1 font-semibold">Grievance Email Address</p>
+              <a href="mailto:grievance@suroor.cc" className="text-[#7be4d5] hover:underline font-bold text-sm">
                 grievance@suroor.cc
               </a>
             </div>
           </div>
           
-          <div className="mt-6 flex items-start gap-3 text-xs text-slate-500 leading-tight">
-            <Scale size={24} className="shrink-0 opacity-50" />
+          <div className="mt-6 flex items-start gap-3 text-xs text-slate-400 leading-relaxed">
+            <Scale size={20} className="shrink-0 text-amber-400/80 mt-0.5" />
             <p>
-              We will acknowledge complaints within 24 to 36 hours and endeavor to resolve them within 15 days from the date of receipt, in accordance with applicable laws.
+              We acknowledge consumer complaints within 24 hours of receipt and endeavor to investigate and resolve issues within 15 calendar days from the date of filing.
             </p>
           </div>
         </Section>
 
-        {/* 03. REGISTERED OFFICE / OPERATIONAL ADDRESS (Crucial for Razorpay Approval) */}
-        <Section num="03" title="Operational Office" icon={<MapPin size={20} />} color="text-blue-400">
-          <p className="mb-4">For formal correspondence and legal notices:</p>
-          <div className="bg-[#0f0f12] border border-white/5 rounded-2xl p-6">
-            <p className="text-white font-bold mb-1">Suroor AI Operations</p>
-            {/* Provide your registered city, state, and country (e.g. New Delhi, India) */}
-            <p className="text-sm text-slate-400 leading-relaxed">
+        {/* 03. REGISTERED / OPERATIONAL OFFICE */}
+        <Section num="03" title="Registered & Operational Office" icon={<MapPin size={20} />} color="text-indigo-400">
+          <p className="mb-4">For formal legal notices, physical correspondence, and compliance verification:</p>
+          <div className="bg-black/40 border border-white/10 rounded-2xl p-6">
+            <p className="text-white font-bold mb-1.5 text-sm">Suroor AI Operations</p>
+            <p className="text-xs text-slate-400 leading-relaxed">
               Operational Jurisdiction: India<br />
-              Contact Address: Maharashtra, India<br />
-              Postal Index Code: 422009
+              Region: Maharashtra, India<br />
+              Postal Index Code (PIN): 422009
             </p>
           </div>
         </Section>
 
-        {/* 04. REPORT CONTENT */}
-        <Section num="04" title="Report Content" icon={<Flag size={20} />} color="text-red-500" bg="bg-red-500/5" border="border-red-500/20">
-          <p className="mb-4">If you believe any AI character or content violates our Terms of Service or applicable law, please provide the following details:</p>
+        {/* 04. CONTENT REPORTING & TRUST & SAFETY */}
+        <Section num="04" title="Report Prohibited Content" icon={<Flag size={20} />} color="text-rose-400" bg="bg-rose-500/5" border="border-rose-500/20">
+          <p className="mb-4">
+            We enforce strict compliance policies regarding non-consensual violence, minors (CSAM), self-harm, and illegal acts. If you encounter any user-generated character or scenario that violates our guidelines:
+          </p>
           
           <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[
-              "Your name and contact information",
-              "A clear description of the issue",
-              "The relevant character or content link",
-              "Any supporting screenshots or data"
+              "Character or Creator Name / Link",
+              "Specific Description of the Violation",
+              "Relevant Screenshots or Context",
+              "Your Contact Email for Resolution Follow-up"
             ].map((item) => (
-              <li key={item} className="flex items-center gap-2 text-xs bg-white/5 p-3 rounded-xl border border-white/5">
-                <MessageSquareWarning size={14} className="text-red-500 shrink-0" />
+              <li key={item} className="flex items-center gap-2 text-xs bg-black/40 p-3 rounded-xl border border-white/5 text-slate-300">
+                <MessageSquareWarning size={14} className="text-rose-400 shrink-0" />
                 <span>{item}</span>
               </li>
             ))}
           </ul>
-          <p className="mt-6 text-center text-xs text-slate-400">
-            Submit reports via the <span className="text-white font-bold">Support Email</span> or through the in-app reporting tools.
+          <p className="mt-5 text-xs text-slate-400">
+            Send reports directly to <a href="mailto:support@suroor.cc" className="text-white font-semibold underline">support@suroor.cc</a> or use the in-app character report button.
           </p>
         </Section>
 
         {/* 05. BUSINESS INQUIRIES */}
-        <Section num="05" title="Business Inquiries" icon={<Briefcase size={20} />} color="text-emerald-400">
-          <p className="mb-4">For enterprise licensing, partnerships, media requests, or custom model integrations:</p>
+        <Section num="05" title="Business & Partnerships" icon={<Briefcase size={20} />} color="text-emerald-400">
+          <p className="mb-4">For enterprise licensing, media inquiries, or technical collaborations:</p>
           <a 
             href="mailto:founder@suroor.cc" 
-            className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 font-bold hover:bg-emerald-500/20 transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 font-bold text-xs uppercase tracking-wider hover:bg-emerald-500/20 transition-all"
           >
-            <Mail size={16} />
+            <Mail size={14} />
             founder@suroor.cc
           </a>
         </Section>
 
-        <footer className="pt-10 border-t border-white/5 text-center">
-          <p className="text-slate-400 text-sm mb-2 italic">&ldquo;Thank you for helping us keep Suroor safe, respectful, and enjoyable for everyone.&rdquo;</p>
-          <p className="text-[10px] text-slate-600 font-black uppercase tracking-[0.4em]">Support Channel Synchronized</p>
+        <footer className="pt-8 border-t border-white/[0.08] text-center">
+          <p className="text-slate-400 text-xs italic mb-1.5">&ldquo;Thank you for helping us maintain a safe, private, and creative community.&rdquo;</p>
+          <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest">Official Suroor Support Desk</p>
         </footer>
       </div>
     </LegalLayout>
   );
 }
 
-function Section({ num, title, icon, children, color = "text-blue-500", bg = "bg-[#0a0a0c]", border = "border-white/5" }: any) {
+function Section({ num, title, icon, children, color = "text-[#7be4d5]", bg = "bg-[#0a1013]", border = "border-white/[0.06]" }: any) {
   return (
-    <section className={`p-8 rounded-[2rem] border ${border} ${bg} transition-all hover:border-white/10`}>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <span className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-black text-sm ${color}`}>{num}</span>
-          <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">{title}</h2>
+    <section className={`p-6 md:p-8 rounded-3xl border ${border} ${bg} transition-all`}>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3.5">
+          <span className={`w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center font-bold text-xs ${color}`}>{num}</span>
+          <h2 className="text-xl font-bold tracking-tight text-white">{title}</h2>
         </div>
-        <div className="text-slate-700">{icon}</div>
+        <div className="text-slate-400">{icon}</div>
       </div>
-      <div className="text-slate-400 text-sm leading-relaxed">
+      <div className="text-slate-300 text-xs md:text-sm leading-relaxed">
         {children}
       </div>
     </section>

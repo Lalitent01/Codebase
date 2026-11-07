@@ -1,28 +1,36 @@
-import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  Inject,
+  forwardRef,
+  Logger,
+} from '@nestjs/common';
 import { LootService } from './loot.service';
 import { PrismaService } from '../prisma.service';
 import { QuestTrigger } from '@prisma/client';
 
 @Injectable()
 export class AnalyticsService {
+  private readonly logger = new Logger(AnalyticsService.name);
+
   constructor(
-    private prisma: PrismaService,
+    private readonly prisma: PrismaService,
     @Inject(forwardRef(() => LootService))
-    private lootService: LootService,
+    private readonly lootService: LootService,
   ) {}
 
   // 1. GENERIC TRACKING
   async track(eventType: string, userId?: string, metadata?: any) {
     try {
       await this.prisma.analyticsEvent.create({
-        data: { eventType, userId, metadata },
+        data: { eventType, userId: userId || null, metadata },
       });
-    } catch (e) {
-      console.error('Analytics tracking failed', e);
+    } catch (e: any) {
+      this.logger.error(`Analytics tracking failed: ${e.message}`);
     }
   }
 
-  // 2. ECONOMY HEARTBEAT (Daily Resets & Streaks)
+  // 2. ECONOMY HEARTBEAT
   async heartbeat(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) return;
@@ -33,20 +41,19 @@ export class AnalyticsService {
 
     const isNewDay = now.toDateString() !== lastReset.toDateString();
 
-    // Reset daily allowance if new day
     let dailyAllowanceUpdate = {};
     if (isNewDay) {
-      const config = await this.prisma.systemConfig.findUnique({ where: { key: 'DAILY_FREE_LIMIT' } });
-      const limit = config && !isNaN(parseInt(config.value)) ? parseInt(config.value) : 30;
+      const config = await this.prisma.systemConfig.findUnique({
+        where: { key: 'DAILY_FREE_LIMIT' },
+      });
+      const limit = config && !isNaN(parseInt(config.value, 10)) ? parseInt(config.value, 10) : 30;
 
       dailyAllowanceUpdate = {
         walletDaily: limit,
         lastDailyReset: now,
       };
-      console.log(`[ECONOMY] Daily reset for ${user.username}. Allowance: ${limit}`);
     }
 
-    // Streak logic (Consecutive days)
     const isYesterday = (date: Date) => {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
@@ -60,10 +67,8 @@ export class AnalyticsService {
       newStreak = 1;
     }
 
-    // Queued Pass activation check
     let passQueueUpdate = {};
     if (user.passExpiry && user.passExpiry < now && (user.queuedPassHours || 0) > 0) {
-      console.log(`[ECONOMY] Activating queued pass for ${user.username}`);
       const newExpiry = new Date(now.getTime() + user.queuedPassHours * 60 * 60 * 1000);
       passQueueUpdate = {
         passExpiry: newExpiry,
@@ -83,13 +88,12 @@ export class AnalyticsService {
       },
     });
 
-    // Session Start Tracking
     if (!lastActive || (now.getTime() - lastActive.getTime()) / 60000 > 30) {
       await this.track('SESSION_START', userId);
     }
   }
 
-  // 3. QUEST ENGINE (Triggering & Progress)
+  // 3. QUEST ENGINE (Atomic Increment to Avoid Race Conditions)
   async handleQuestTrigger(userId: string, trigger: QuestTrigger, increment: number = 1) {
     const activeQuests = await this.prisma.quest.findMany({
       where: { trigger, isActive: true },
@@ -101,35 +105,37 @@ export class AnalyticsService {
       });
 
       if (!progress) {
-        progress = await this.prisma.userQuestProgress.create({
-          data: { userId, questId: quest.id, currentValue: 0 },
-        });
+        try {
+          progress = await this.prisma.userQuestProgress.create({
+            data: { userId, questId: quest.id, currentValue: 0 },
+          });
+        } catch {
+          progress = await this.prisma.userQuestProgress.findFirst({
+            where: { userId, questId: quest.id },
+          });
+        }
       }
 
-      if (progress.isCompleted) continue;
+      if (!progress || progress.isCompleted) continue;
 
-      const newValue = progress.currentValue + increment;
-      const isNowFinished = newValue >= quest.goalValue;
-
-      await this.prisma.userQuestProgress.update({
+      const updated = await this.prisma.userQuestProgress.update({
         where: { id: progress.id },
         data: {
-          currentValue: newValue,
-          isCompleted: isNowFinished,
+          currentValue: { increment },
         },
       });
 
-      if (isNowFinished) {
-        console.log(`[QUEST] User ${userId} completed "${quest.title}". Ready for claim.`);
+      if (!updated.isCompleted && updated.currentValue >= quest.goalValue) {
+        await this.prisma.userQuestProgress.update({
+          where: { id: progress.id },
+          data: { isCompleted: true },
+        });
       }
     }
   }
 
-  // 4. QUEST CLAIMING (Updated: Supports progressId OR questId with Terminal Logging)
+  // 4. QUEST CLAIMING (Atomic Check & Claim)
   async claimQuestReward(userId: string, progressIdOrQuestId: string) {
-    console.log(`[QUEST] User ${userId} requested claim for: ${progressIdOrQuestId}`);
-
-    // Try finding by progress ID first; if not found, find by questId + userId
     let progress = await this.prisma.userQuestProgress.findUnique({
       where: { id: progressIdOrQuestId },
       include: { quest: true },
@@ -143,7 +149,6 @@ export class AnalyticsService {
     }
 
     if (!progress || progress.userId !== userId) {
-      console.error(`[QUEST CLAIM FAILED] No progress record found for user ${userId} and ID ${progressIdOrQuestId}`);
       throw new BadRequestException('Progress record not found.');
     }
 
@@ -156,11 +161,19 @@ export class AnalyticsService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // Mark as claimed
-      await tx.userQuestProgress.update({
-        where: { id: progress.id },
+      // Atomic condition: will fail if another concurrent request marked it claimed
+      const claimResult = await tx.userQuestProgress.updateMany({
+        where: {
+          id: progress.id,
+          isClaimed: false,
+          isCompleted: true,
+        },
         data: { isClaimed: true },
       });
+
+      if (claimResult.count === 0) {
+        throw new BadRequestException('Reward has already been claimed.');
+      }
 
       if (progress.quest.rewardType === 'CREDITS') {
         const creditReward = Number(progress.quest.rewardValue) || 10;
@@ -168,13 +181,9 @@ export class AnalyticsService {
           where: { id: userId },
           data: { walletBonus: { increment: creditReward } },
         });
-
-        console.log(`✅ [QUEST CLAIMED] Successfully awarded ${creditReward} credits to user ${userId} for "${progress.quest.title}"`);
         return { success: true, reward: creditReward, type: 'CREDITS' };
       } else {
-        // Reward is a Chest
         if (!progress.quest.lootBoxId) {
-          console.error(`[QUEST CLAIM FAILED] Quest "${progress.quest.title}" has rewardType CHEST but lootBoxId is null`);
           throw new BadRequestException('Loot box is not configured for this quest.');
         }
 
@@ -185,14 +194,12 @@ export class AnalyticsService {
 
         const count = Number(progress.quest.rewardValue) || 1;
         await this.lootService.addChestToInventory(userId, progress.quest.lootBoxId, count, tx);
-
-        console.log(`✅ [QUEST CLAIMED] Successfully awarded ${count}x "${box.name}" Chest to user ${userId} for "${progress.quest.title}"`);
         return { success: true, reward: count, type: 'CHEST', boxName: box.name };
       }
     });
   }
 
-  // 5. STREAK STATUS (Day 1-7 Welcome)
+  // 5. STREAK STATUS
   async getStreakStatus(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -212,35 +219,44 @@ export class AnalyticsService {
     };
   }
 
-  // 6. STREAK CLAIMING
+  // 6. STREAK CLAIMING (Concurrent Duplicate Protected)
   async claimStreakReward(userId: string, dayNumber: number) {
     const status = await this.getStreakStatus(userId);
-    if (!status?.isEligible || status.currentDay !== dayNumber) throw new BadRequestException('Not eligible today.');
-    if (status.isClaimedToday) throw new BadRequestException('Already claimed today.');
+    if (!status?.isEligible || status.currentDay !== dayNumber) {
+      throw new BadRequestException('Not eligible today.');
+    }
+    if (status.isClaimedToday) {
+      throw new BadRequestException('Already claimed today.');
+    }
 
     const tier = await this.prisma.rewardTier.findFirst({
       where: { daysRequired: dayNumber, isActive: true },
     });
     if (!tier) throw new BadRequestException('Reward tier not active.');
 
-    return this.prisma.$transaction(async (tx) => {
-      await tx.streakClaim.create({ data: { userId, dayNumber } });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.streakClaim.create({ data: { userId, dayNumber } });
 
-      if (tier.rewardType === 'CREDITS') {
-        const creditAmount = tier.creditsGiven || 0;
-        await tx.user.update({
-          where: { id: userId },
-          data: { walletBonus: { increment: creditAmount } },
-        });
-        console.log(`✅ [STREAK CLAIMED] User ${userId} claimed Day ${dayNumber} (+${creditAmount} credits)`);
-        return { success: true, rewardAmount: creditAmount, type: 'CREDITS' };
-      } else {
-        if (!tier.lootBoxId) throw new BadRequestException('Loot box is missing for this tier.');
-        await this.lootService.addChestToInventory(userId, tier.lootBoxId, 1, tx);
-        console.log(`✅ [STREAK CLAIMED] User ${userId} claimed Day ${dayNumber} (Chest ${tier.lootBoxId})`);
-        return { success: true, rewardAmount: 1, type: 'CHEST', boxId: tier.lootBoxId };
+        if (tier.rewardType === 'CREDITS') {
+          const creditAmount = tier.creditsGiven || 0;
+          await tx.user.update({
+            where: { id: userId },
+            data: { walletBonus: { increment: creditAmount } },
+          });
+          return { success: true, rewardAmount: creditAmount, type: 'CREDITS' };
+        } else {
+          if (!tier.lootBoxId) throw new BadRequestException('Loot box is missing for this tier.');
+          await this.lootService.addChestToInventory(userId, tier.lootBoxId, 1, tx);
+          return { success: true, rewardAmount: 1, type: 'CHEST', boxId: tier.lootBoxId };
+        }
+      });
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        throw new BadRequestException('Streak reward already claimed for this day.');
       }
-    });
+      throw error;
+    }
   }
 
   // 7. USER PROGRESS VIEW
@@ -265,7 +281,7 @@ export class AnalyticsService {
     });
   }
 
-  // 8. ADMIN PANEL & BI
+  // 8. ADMIN & BI METRICS
   async getAdminStats() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -292,7 +308,6 @@ export class AnalyticsService {
       },
     });
 
-    // In-memory aggregation to avoid grouping on JSON fields in Prisma
     const recentChatEvents = await this.prisma.analyticsEvent.findMany({
       where: { eventType: 'CHAT_MESSAGE' },
       select: { metadata: true },
@@ -453,7 +468,10 @@ export class AnalyticsService {
   }
 
   async getReports() {
-    return this.prisma.report.findMany({ where: { status: 'PENDING' }, orderBy: { createdAt: 'desc' } });
+    return this.prisma.report.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   async getPendingReview() {
@@ -488,6 +506,9 @@ export class AnalyticsService {
   }
 
   async getActiveRewards() {
-    return this.prisma.rewardTier.findMany({ where: { isActive: true }, orderBy: { daysRequired: 'asc' } });
+    return this.prisma.rewardTier.findMany({
+      where: { isActive: true },
+      orderBy: { daysRequired: 'asc' },
+    });
   }
 }

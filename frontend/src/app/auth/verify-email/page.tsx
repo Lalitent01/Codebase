@@ -14,7 +14,6 @@ function VerifyContent() {
   useEffect(() => {
     const token = searchParams.get('token');
 
-    // Immediate check so we never get stuck on an infinite loading spinner
     if (!token) {
       setStatus('error');
       return;
@@ -26,36 +25,43 @@ function VerifyContent() {
   }, [searchParams]);
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 text-center">
+    <div className="min-h-screen bg-[#030708] text-white flex flex-col items-center justify-center p-6 text-center">
       {status === 'loading' && (
-        <>
-          <Loader2 className="animate-spin text-blue-500 mb-4" size={48} />
-          <h1 className="text-2xl font-bold">Verifying Neural Link...</h1>
-          <p className="text-slate-500 text-sm mt-2">Authenticating your access token...</p>
-        </>
+        <div className="flex flex-col items-center">
+          <Loader2 className="animate-spin text-[#7be4d5] mb-4" size={48} />
+          <h1 className="text-2xl font-bold">Verifying your email...</h1>
+          <p className="text-slate-400 text-sm mt-2">Confirming your account details, please wait.</p>
+        </div>
       )}
       {status === 'success' && (
-        <>
-          <CheckCircle2 className="text-green-500 mb-4" size={48} />
-          <h1 className="text-2xl font-bold">Verification Complete!</h1>
-          <p className="text-slate-400 mt-2 mb-8">Your account is now fully verified and activated.</p>
+        <div className="flex flex-col items-center max-w-sm">
+          <CheckCircle2 className="text-emerald-400 mb-4" size={56} />
+          <h1 className="text-2xl font-bold">Email Verified!</h1>
+          <p className="text-slate-400 text-sm mt-2 mb-8">
+            Your account is confirmed. You now have full access to character creation and features.
+          </p>
           <button 
             onClick={() => router.push('/dashboard')} 
-            className="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-xl font-bold transition"
+            className="w-full bg-[#7be4d5] text-black hover:bg-[#6bd6c7] px-8 py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider transition"
           >
             Go to Dashboard
           </button>
-        </>
+        </div>
       )}
       {status === 'error' && (
-        <>
-          <XCircle className="text-red-500 mb-4" size={48} />
+        <div className="flex flex-col items-center max-w-sm">
+          <XCircle className="text-rose-400 mb-4" size={56} />
           <h1 className="text-2xl font-bold">Verification Failed</h1>
-          <p className="text-slate-400 mt-2 mb-8">The verification link is missing, invalid, or has already expired.</p>
-          <Link href="/auth/login" className="text-blue-500 hover:underline font-bold text-sm">
-            Back to Login
+          <p className="text-slate-400 text-sm mt-2 mb-8">
+            The verification link is invalid, incomplete, or has already expired.
+          </p>
+          <Link 
+            href="/auth/login" 
+            className="text-[#7be4d5] hover:underline font-semibold text-sm"
+          >
+            Back to Sign In
           </Link>
-        </>
+        </div>
       )}
     </div>
   );
@@ -63,7 +69,7 @@ function VerifyContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<div className="bg-black min-h-screen" />}>
+    <Suspense fallback={<div className="bg-[#030708] min-h-screen" />}>
       <VerifyContent />
     </Suspense>
   );

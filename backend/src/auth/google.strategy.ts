@@ -1,16 +1,16 @@
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
-  constructor() {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
-    // Verify it is loading correctly:
-    console.log('[DEBUG] Loaded Google Secret:', process.env.GOOGLE_CLIENT_SECRET ? `${process.env.GOOGLE_CLIENT_SECRET.substring(0, 8)}...` : 'UNDEFINED');
+  constructor(configService: ConfigService) {
+    const backendUrl = configService.get<string>('BACKEND_URL') || 'http://localhost:3001';
+
     super({
-      clientID: process.env.GOOGLE_CLIENT_ID || 'missing_client_id',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'missing_client_secret',
+      clientID: configService.get<string>('GOOGLE_CLIENT_ID') || '',
+      clientSecret: configService.get<string>('GOOGLE_CLIENT_SECRET') || '',
       callbackURL: `${backendUrl}/api/auth/google/callback`,
       scope: ['email', 'profile'],
     });
@@ -18,7 +18,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
   async validate(
     accessToken: string,
-    refreshToken: string,
+    _refreshToken: string,
     profile: any,
     done: VerifyCallback,
   ): Promise<any> {

@@ -15,8 +15,16 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return service status', () => {
+      const result = appController.getRoot();
+      expect(result).toHaveProperty('status', 'online');
+      expect(result).toHaveProperty('service', 'Suroor AI Backend');
+    });
+
+    it('should return health status', () => {
+      const health = appController.getHealth();
+      expect(health).toHaveProperty('status', 'ok');
+      expect(health).toHaveProperty('uptime');
     });
   });
 });

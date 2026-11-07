@@ -38,42 +38,48 @@ export default function RecentChatsPage() {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!confirm('Are you sure you want to delete this conversation? This cannot be undone.')) return;
+    if (!confirm('Are you sure you want to delete this conversation? This history cannot be recovered.')) return;
 
     setDeletingId(chatId);
     try {
       await api.delete(`/chat/${chatId}`);
       setChats((prev) => prev.filter((c) => c.chatId !== chatId));
     } catch {
-      alert('Failed to delete chat.');
+      alert('Failed to delete conversation.');
     } finally {
       setDeletingId(null);
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0c] text-white font-sans">
+    <div className="flex min-h-screen bg-[#030708] text-white">
       <Sidebar />
-      <main className="flex-1 p-8 overflow-y-auto">
-        <header className="mb-10">
-          <h1 className="text-3xl font-black italic tracking-tighter uppercase flex items-center gap-3 text-blue-500">
-            <MessageSquare size={28} /> Recent History
+      <main className="flex-1 p-6 md:p-8 overflow-y-auto">
+        <header className="mb-8">
+          <h1 className="text-3xl font-black tracking-tight flex items-center gap-3 text-white">
+            <MessageSquare className="text-[#7be4d5]" size={28} /> Recent Conversations
           </h1>
-          <p className="text-slate-500 text-xs mt-1 uppercase tracking-widest font-bold">Your neural link archive</p>
+          <p className="text-slate-400 text-xs mt-1 uppercase tracking-widest font-semibold">
+            Continue where you left off
+          </p>
         </header>
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-48 bg-white/5 rounded-[2rem] animate-pulse" />
+              <div key={i} className="h-48 bg-[#0a1013] border border-white/[0.06] rounded-3xl animate-pulse" />
             ))}
           </div>
         ) : chats.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 border border-dashed border-white/10 rounded-[3rem]">
-            <Ghost size={48} className="text-slate-700 mb-4" />
-            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">No neural links established</p>
-            <Link href="/dashboard" className="mt-4 text-blue-500 hover:underline font-bold text-sm">
-              Find a companion →
+          <div className="flex flex-col items-center justify-center py-24 border border-dashed border-white/10 rounded-3xl bg-[#0a1013]/50">
+            <Ghost size={48} className="text-slate-600 mb-3" />
+            <p className="text-slate-400 font-semibold tracking-wider text-sm">No active chats yet</p>
+            <p className="text-slate-500 text-xs mt-1 mb-5">Start your first roleplay with any Indian AI companion.</p>
+            <Link 
+              href="/dashboard" 
+              className="bg-[#7be4d5] hover:bg-[#6bd6c7] text-black font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition"
+            >
+              Explore Companions →
             </Link>
           </div>
         ) : (
@@ -81,14 +87,14 @@ export default function RecentChatsPage() {
             {chats.map((char) => (
               <div 
                 key={char.chatId} 
-                className="group relative bg-[#111318] border border-white/5 p-6 rounded-[2rem] hover:border-blue-500/30 transition-all flex flex-col gap-4 shadow-xl"
+                className="group relative bg-[#0a1013] border border-white/[0.06] p-6 rounded-3xl hover:border-[#7be4d5]/40 transition-all flex flex-col gap-4 shadow-xl"
               >
-                {/* Delete Button (Separated from Link to avoid DOM nesting warning) */}
+                {/* Delete Button */}
                 <button 
                   type="button"
                   onClick={(e) => handleDeleteChat(e, char.chatId)}
                   disabled={deletingId === char.chatId}
-                  className="absolute top-6 right-6 p-2 bg-red-500/10 text-red-500/40 hover:text-red-500 hover:bg-red-500/20 rounded-xl transition-all z-20 cursor-pointer disabled:opacity-50"
+                  className="absolute top-5 right-5 p-2 bg-rose-500/10 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded-xl transition-all z-20 cursor-pointer disabled:opacity-50"
                   title="Delete Conversation"
                   aria-label="Delete Conversation"
                 >
@@ -98,36 +104,36 @@ export default function RecentChatsPage() {
                 {/* Primary Card Link */}
                 <Link href={`/chat/${char.id}`} className="flex flex-col gap-4 flex-1">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-2xl font-black text-blue-500 border border-white/5 group-hover:scale-105 transition-transform uppercase overflow-hidden flex-shrink-0">
+                    <div className="w-14 h-14 rounded-2xl bg-[#152328] flex items-center justify-center text-xl font-bold text-[#7be4d5] border border-white/10 group-hover:scale-105 transition-transform overflow-hidden flex-shrink-0">
                       {char.avatar ? (
-                        <img src={char.avatar} className="w-full h-full object-cover" alt={char.name || 'Bot'} />
+                        <img src={char.avatar} className="w-full h-full object-cover" alt={char.name || 'Character'} />
                       ) : (
                         <span>{char.name?.[0] || '?'}</span>
                       )}
                     </div>
                     <div className="flex-1 min-w-0 pr-8">
-                      <h3 className="font-bold text-white text-lg truncate group-hover:text-blue-400 transition-colors uppercase italic tracking-tighter">
+                      <h3 className="font-bold text-white text-base truncate group-hover:text-[#7be4d5] transition-colors tracking-tight">
                         {char.name || 'Unnamed Character'}
                       </h3>
-                      <div className="flex items-center gap-1.5 text-slate-500">
+                      <div className="flex items-center gap-1.5 text-slate-400 mt-1">
                         <Clock size={12} />
-                        <span className="text-[10px] font-black uppercase">
+                        <span className="text-[11px] font-medium">
                           {char.lastInteraction ? new Date(char.lastInteraction).toLocaleDateString() : 'Recent'}
                         </span>
                       </div>
                     </div>
                   </div>
                   
-                  <p className="text-xs text-slate-500 line-clamp-2 italic font-medium h-8">
+                  <p className="text-xs text-slate-400 line-clamp-2 italic font-normal h-8">
                     &ldquo;{char.description || 'No description provided.'}&rdquo;
                   </p>
 
-                  <div className="mt-2 pt-4 border-t border-white/5 flex items-center justify-between">
-                    <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">
-                      by @{char.creator?.username || 'System'}
+                  <div className="mt-2 pt-4 border-t border-white/[0.06] flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      by @{char.creator?.username || 'Suroor'}
                     </span>
-                    <div className="flex items-center gap-2 text-blue-500 font-black text-[10px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
-                      Continue <PlayCircle size={16} />
+                    <div className="flex items-center gap-1.5 text-[#7be4d5] font-bold text-xs uppercase tracking-wider group-hover:translate-x-1 transition-transform">
+                      Resume <PlayCircle size={15} />
                     </div>
                   </div>
                 </Link>

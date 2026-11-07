@@ -4,10 +4,18 @@ import { AnalyticsController } from './analytics.controller';
 import { AdminController } from './admin.controller';
 import { LootService } from './loot.service';
 import { PrismaService } from '../prisma.service';
+import { AdminGuard } from './guards/admin.guard';
+import { OptionalJwtAuthGuard } from './guards/optional-auth.guard';
 
 @Module({
   controllers: [AdminController, AnalyticsController],
-  providers: [AnalyticsService, LootService, PrismaService],
+  providers: [
+    AnalyticsService,
+    LootService,
+    PrismaService,
+    AdminGuard,
+    OptionalJwtAuthGuard,
+  ],
   exports: [AnalyticsService, LootService],
 })
 export class AnalyticsModule {}

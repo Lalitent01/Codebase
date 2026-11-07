@@ -1,184 +1,226 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import api from '@/lib/axios';
 import Sidebar from '@/components/Sidebar';
+import api from '@/lib/axios';
 import Link from 'next/link';
 import { 
-  MessageSquare, ShieldCheck, Calendar, Sparkles, 
-  UserPlus, UserMinus, Loader2, UserX 
+  ArrowLeft, Share2, Heart, Users, MessageSquare, 
+  Sparkles, Loader2, PlayCircle, ShieldCheck
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useUIStore } from '@/store/useUIStore';
 
 export default function CreatorProfileClient({ username }: { username: string }) {
   const router = useRouter();
-  const { user: currentUser } = useAuthStore();
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const { token, user: currentUser } = useAuthStore();
+  const { openAuthModal } = useUIStore();
 
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await api.get(`/characters/creator/${username}`);
-      if (!res.data) {
-        setNotFound(true);
-      } else {
-        setData(res.data);
-      }
-    } catch (err: any) {
-      if (err.response?.status === 404) {
-        setNotFound(true);
-      }
-      console.error('Failed to load creator profile', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [username]);
+  const [creator, setCreator] = useState<any>(null);
+  const [bots, setBots] = useState<any[]>([]);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (username) fetchData();
-  }, [username, fetchData]);
+    let isMounted = true;
+    setLoading(true);
 
-  const handleFollow = async () => {
-    if (!currentUser) {
-      router.push('/auth/login');
-      return;
-    }
+    api.get(`/characters/creator/${username}`)
+      .then((res) => {
+        if (!isMounted) return;
+        setCreator(res.data.creator);
+        setBots(res.data.bots || []);
+      })
+      .catch((err) => {
+        console.error('Failed to load creator profile:', err);
+        router.push('/dashboard');
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
 
+    return () => {
+      isMounted = false;
+    };
+  }, [username, router]);
+
+  const handleShare = async () => {
+    const url = window.location.href;
     try {
-      const res = await api.post(`/characters/creator/${data.creator.id}/follow`);
-      setData((prev: any) => ({ ...prev, isFollowing: res.data.followed }));
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        alert('Creator profile link copied to clipboard!');
+      } else {
+        window.prompt('Copy profile link:', url);
+      }
     } catch {
-      alert('Action failed.');
+      window.prompt('Copy profile link:', url);
     }
   };
 
-  if (loading) {
+  const handleToggleFollow = async () => {
+    if (!token) {
+      openAuthModal('login');
+      return;
+    }
+
+    if (!creator?.id) return;
+
+    try {
+      const res = await api.post(`/characters/creator/${creator.id}/follow`);
+      setIsFollowing(res.data.followed);
+    } catch (err: any) {
+      console.error('Follow action failed:', err);
+    }
+  };
+
+  if (loading || !creator) {
     return (
-      <div className="bg-black min-h-screen text-white flex flex-col items-center justify-center font-mono gap-4 uppercase tracking-[0.3em]">
-        <Loader2 className="animate-spin text-blue-500" size={36} />
-        <p className="animate-pulse text-xs">Neural_Pilot_Searching...</p>
+      <div className="bg-[#030708] min-h-screen text-white flex flex-col items-center justify-center gap-4">
+        <Loader2 className="animate-spin text-[#7be4d5]" size={36} />
+        <p className="text-slate-400 tracking-widest text-xs uppercase font-medium">Loading Creator Profile...</p>
       </div>
     );
   }
 
-  if (notFound || !data?.creator) {
-    return (
-      <div className="flex min-h-screen bg-[#050505] text-white">
-        <Sidebar />
-        <main className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-          <UserX size={48} className="text-slate-600 mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Creator Not Found</h2>
-          <p className="text-slate-500 text-sm mb-6">No neural signature exists for @{username}.</p>
-          <Link href="/dashboard" className="px-6 py-2 bg-blue-600 rounded-xl text-xs font-bold uppercase hover:bg-blue-700 transition">
-            Back to Dashboard
-          </Link>
-        </main>
-      </div>
-    );
-  }
-
-  // Safe Total Signal math preventing NaN
-  const totalSignal = (data.bots || []).reduce((acc: number, b: any) => acc + (b.chatCount || 0), 0);
+  const isSelf = currentUser?.username === creator.username;
 
   return (
-    <div className="flex min-h-screen bg-[#050505] text-white">
+    <div className="flex min-h-screen bg-[#030708] text-white">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto pb-20">
-        <div className="h-72 bg-gradient-to-b from-blue-600/20 to-transparent border-b border-white/5 relative">
-          <div className="max-w-6xl mx-auto px-8 h-full flex items-end pb-12">
-            <div className="flex flex-col md:flex-row gap-8 items-center md:items-end w-full">
-              {/* CREATOR AVATAR (Now supports image avatar if set) */}
-              <div className="w-32 h-32 rounded-[2.5rem] bg-slate-800 border-4 border-[#050505] shadow-2xl flex items-center justify-center text-5xl font-black text-blue-500 uppercase italic overflow-hidden flex-shrink-0">
-                {data.creator.avatar ? (
-                  <img src={data.creator.avatar} className="w-full h-full object-cover" alt={data.creator.username} />
-                ) : (
-                  <span>{data.creator.username?.[0] || '?'}</span>
-                )}
-              </div>
-              
-              <div className="flex-1 text-center md:text-left">
-                <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                  <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase italic">
-                    @{data.creator.username}
-                  </h1>
-                  <ShieldCheck size={24} className="text-blue-400" />
-                </div>
-                <div className="flex flex-wrap justify-center md:justify-start gap-5 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                  <span className="flex items-center gap-1.5">
-                    <MessageSquare size={14} className="text-blue-500"/> {data.bots?.length || 0} Neural Links
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Calendar size={14} className="text-blue-500"/> Registered {new Date(data.creator.createdAt).getFullYear()}
-                  </span>
-                </div>
-              </div>
+      <main className="flex-1 p-6 md:p-10 overflow-y-auto pb-24">
+        {/* TOP BAR */}
+        <div className="flex items-center justify-between mb-8">
+          <button 
+            onClick={() => router.back()} 
+            className="p-2.5 bg-[#0a1013] border border-white/10 rounded-2xl hover:bg-white/5 transition text-slate-300"
+            aria-label="Go Back"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <button 
+            onClick={handleShare} 
+            className="p-2.5 bg-[#0a1013] border border-white/10 rounded-2xl hover:bg-white/5 transition text-slate-300 flex items-center gap-2 text-xs font-semibold"
+          >
+            <Share2 size={16} /> Share Profile
+          </button>
+        </div>
 
-              {currentUser?.id !== data.creator.id && (
-                <button 
-                  onClick={handleFollow}
-                  className={`flex items-center gap-2 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg ${
-                    data.isFollowing 
-                      ? 'bg-white/5 border border-white/10 text-white hover:bg-red-500/10 hover:text-red-500' 
-                      : 'bg-blue-600 text-white hover:bg-blue-500'
-                  }`}
-                >
-                  {data.isFollowing ? <><UserMinus size={16} /> Unlink</> : <><UserPlus size={16} /> Follow</>}
-                </button>
+        {/* CREATOR HEADER CARD */}
+        <div className="bg-[#0a1013] border border-white/[0.06] rounded-3xl p-6 md:p-8 mb-10 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#7be4d5]/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 relative z-10 text-center sm:text-left">
+            <div className="w-24 h-24 rounded-3xl bg-[#152328] border-2 border-[#7be4d5]/30 overflow-hidden flex items-center justify-center text-3xl font-black text-[#7be4d5] shadow-lg flex-shrink-0">
+              {creator.avatar ? (
+                <img src={creator.avatar} className="w-full h-full object-cover" alt={creator.username} />
+              ) : (
+                <span>{creator.username?.[0]?.toUpperCase() || '?'}</span>
               )}
             </div>
+
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 mb-1.5">
+                <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+                  @{creator.username}
+                </h1>
+                <span className="bg-[#7be4d5]/10 text-[#7be4d5] border border-[#7be4d5]/20 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                  <ShieldCheck size={12} /> Creator
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-400 mb-4 max-w-xl leading-relaxed">
+                {creator.bio || 'Creating immersive Indian AI companions on Suroor.'}
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-6 text-xs text-slate-400">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Sparkles size={14} className="text-[#7be4d5]" />
+                  <span className="text-white font-bold">{bots.length}</span> Characters Created
+                </div>
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Users size={14} className="text-slate-400" />
+                  Joined {new Date(creator.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                </div>
+              </div>
+            </div>
+
+            {!isSelf && (
+              <button 
+                onClick={handleToggleFollow}
+                className={`px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition ${
+                  isFollowing 
+                    ? 'bg-white/10 text-white hover:bg-white/20' 
+                    : 'bg-[#7be4d5] text-black hover:bg-[#6bd6c7] shadow-md shadow-[#7be4d5]/10'
+                }`}
+              >
+                {isFollowing ? 'Following' : 'Follow'}
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto px-8 py-16">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
-            <div className="space-y-12">
-              <section>
-                <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-6">Identity Logs</h3>
-                <p className="text-slate-300 leading-relaxed italic text-lg font-medium">
-                  {data.creator.bio || 'Mysterious neural signature detected. No bio logs found.'}
-                </p>
-              </section>
-              <section className="p-6 bg-[#111318] border border-white/5 rounded-[2.5rem]">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 italic">Platform Impact</p>
-                <div className="flex justify-between items-baseline">
-                  <span className="text-xs text-slate-500 font-bold uppercase tracking-tighter">Total Signal</span>
-                  <span className="text-2xl font-black text-white">{totalSignal}</span>
-                </div>
-              </section>
-            </div>
+        {/* CHARACTER ROSTER */}
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-black tracking-tight flex items-center gap-2 text-white">
+              <Sparkles className="text-[#7be4d5]" size={18} /> Public Characters ({bots.length})
+            </h2>
+          </div>
 
-            <div className="lg:col-span-2">
-              <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
-                <Sparkles size={14} /> Soul Portfolio
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {(data.bots || []).map((bot: any) => (
-                  <Link 
-                    href={`/character/${bot.id}`} 
-                    key={bot.id} 
-                    className="group bg-[#111318] border border-white/5 p-6 rounded-[2.5rem] hover:border-blue-500/30 transition-all shadow-xl flex items-center gap-4"
-                  >
-                    <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-white/5 overflow-hidden flex items-center justify-center shrink-0 shadow-inner">
+          {bots.length === 0 ? (
+            <div className="bg-[#0a1013] border border-white/[0.06] rounded-3xl p-12 text-center text-slate-500">
+              <p className="text-sm font-semibold">No public characters published yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {bots.map((bot) => (
+                <Link 
+                  key={bot.id} 
+                  href={`/character/${bot.id}`} 
+                  className="group bg-[#0a1013] border border-white/[0.06] hover:border-[#7be4d5]/30 rounded-3xl p-5 transition-all shadow-xl flex flex-col justify-between"
+                >
+                  <div className="flex items-start gap-3.5 mb-3">
+                    <div className="w-14 h-14 rounded-2xl bg-[#152328] border border-white/10 flex items-center justify-center font-bold text-[#7be4d5] text-lg overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform">
                       {bot.avatar ? (
                         <img src={bot.avatar} className="w-full h-full object-cover" alt={bot.name} />
                       ) : (
-                        <span className="font-black text-blue-500 italic">{bot.name?.[0] || '?'}</span>
+                        <span>{bot.name?.[0] || '?'}</span>
                       )}
                     </div>
-                    <div className="min-w-0">
-                      <h4 className="text-lg font-black text-white group-hover:text-blue-400 transition-colors uppercase italic truncate">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-white text-base truncate group-hover:text-[#7be4d5] transition-colors">
                         {bot.name}
-                      </h4>
-                      <p className="text-[9px] text-slate-500 uppercase font-black">{bot.chatCount || 0} Chats</p>
+                      </h3>
+                      <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">
+                        {bot.language || 'HINGLISH'} • {bot.gender || 'OTHER'}
+                      </p>
                     </div>
-                  </Link>
-                ))}
-              </div>
+                  </div>
+
+                  <p className="text-xs text-slate-400 line-clamp-2 italic mb-4">
+                    &ldquo;{bot.description}&rdquo;
+                  </p>
+
+                  <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-3 text-slate-400 text-[11px]">
+                      <span className="flex items-center gap-1">
+                        <MessageSquare size={12} className="text-[#7be4d5]" /> {bot.chatCount || 0}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Heart size={12} className="text-rose-400" /> {bot.likesCount || 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[#7be4d5] font-bold text-xs uppercase tracking-wider group-hover:translate-x-1 transition-transform">
+                      Chat <PlayCircle size={14} />
+                    </div>
+                  </div>
+                </Link>
+              ))}
             </div>
-          </div>
-        </div>
+          )}
+        </section>
       </main>
     </div>
   );

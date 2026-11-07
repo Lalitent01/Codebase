@@ -1,13 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { AiService } from './ai.service';
-import { describe, beforeEach, it } from 'node:test';
 
 describe('AiService', () => {
   let service: AiService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AiService],
+      providers: [
+        AiService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === 'DEEPINFRA_API_KEY') return 'test_deepinfra_key';
+              return null;
+            }),
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<AiService>(AiService);

@@ -1,8 +1,10 @@
 import { Module, Global } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { CacheService } from './cache.service';
 
-@Global() // Makes CacheService accessible across all modules without re-importing
+@Global()
 @Module({
+  imports: [ConfigModule],
   providers: [CacheService],
   exports: [CacheService],
 })

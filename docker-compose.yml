@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: suroor-backend
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    env_file:
+      - ./backend/.env
+    ports:
+      - "127.0.0.1:3001:3001"
+    networks:
+      - suroor-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=https://api.suroor.cc/api
+        - NEXT_PUBLIC_API_BASE_URL=https://api.suroor.cc/api
+        - NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxx # Replace with live key when ready
+        - NEXT_PUBLIC_SITE_URL=https://suroor.cc
+        - BACKEND_URL=https://api.suroor.cc
+    container_name: suroor-frontend
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - suroor-net
+
+networks:
+  suroor-net:
+    driver: bridge

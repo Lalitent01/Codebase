@@ -8,7 +8,7 @@ import { Loader2 } from 'lucide-react';
 function CallbackHandler() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { fetchUser, setAuth } = useAuthStore();
+  const { fetchUser } = useAuthStore();
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -35,17 +35,17 @@ function CallbackHandler() {
   }, [searchParams, router, fetchUser]);
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-6">
-      <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-      <h2 className="text-2xl font-bold mb-2">Syncing your account...</h2>
-      <p className="text-slate-500 text-sm">Please wait while we set up your profile.</p>
+    <div className="min-h-screen bg-[#030708] flex flex-col items-center justify-center text-white p-6">
+      <Loader2 className="w-12 h-12 text-[#7be4d5] animate-spin mb-4" />
+      <h2 className="text-2xl font-bold mb-2">Completing your sign in...</h2>
+      <p className="text-slate-400 text-sm">Setting up your private workspace. Just a moment.</p>
     </div>
   );
 }
 
 export default function AuthCallback() {
   return (
-    <Suspense fallback={<div className="bg-black min-h-screen" />}>
+    <Suspense fallback={<div className="bg-[#030708] min-h-screen" />}>
       <CallbackHandler />
     </Suspense>
   );

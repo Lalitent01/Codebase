@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import { 
   Send, ChevronLeft, AlertTriangle, RotateCcw, 
-  Edit2, X, Check, ShieldCheck, Lock, Heart 
+  Edit2, X, Check, Lock, Heart 
 } from 'lucide-react';
 import api from '@/lib/axios';
 import Link from 'next/link';
@@ -15,7 +15,7 @@ import { FormattedMessage } from '@/components/FormattedMessage';
 export default function ChatClient({ id }: { id: string }) {
   const router = useRouter();
   const characterId = id;
-  const { user, decreaseCredits, fetchUser } = useAuthStore();
+  const { decreaseCredits, fetchUser } = useAuthStore();
   
   const [chatId, setChatId] = useState<string | null>(null);
   const [character, setCharacter] = useState<any>(null);
@@ -94,7 +94,7 @@ export default function ChatClient({ id }: { id: string }) {
     setMessages((prev) => [...prev, { role: 'ASSISTANT', content: '' }]);
     
     try {
-      const rawBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
+      const rawBase = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
       const cleanBase = rawBase.replace(/\/$/, '');
       const token = localStorage.getItem('token');
 
@@ -151,6 +151,7 @@ export default function ChatClient({ id }: { id: string }) {
             if (!hiddenMode) {
               fullAiContent += content;
 
+              // Prevent raw ### JSON tags from appearing in chat bubbles
               if (fullAiContent.includes('###')) {
                 const visiblePart = fullAiContent.split('###')[0];
                 const cleanContent = visiblePart.replace(/^[\s\n\r]+/, '');
@@ -170,19 +171,19 @@ export default function ChatClient({ id }: { id: string }) {
               }
             }
           } catch {
-            // Ignore non-JSON chunks
+            // Non-JSON SSE chunks ignored
           }
         }
       }
     } catch (err) {
-      console.error('Neural Link Error:', err);
+      console.error('Chat Stream Error:', err);
       setIsTyping(false);
 
       setMessages((prev) => {
         const updated = [...prev];
         const last = updated[updated.length - 1];
         if (last && last.role === 'ASSISTANT' && !last.content) {
-          last.content = '⚠️ Neural link interrupted. Please try regenerating.';
+          last.content = '⚠️ Connection was interrupted. Please try clicking regenerate.';
         }
         return updated;
       });
@@ -198,7 +199,7 @@ export default function ChatClient({ id }: { id: string }) {
       await api.delete(`/chat/${chatId}/regenerate`);
       startStream(chatId);
     } catch (e) {
-      console.error('Failed to regenerate response', e);
+      console.error('Failed to regenerate response:', e);
     }
   };
 
@@ -273,48 +274,48 @@ export default function ChatClient({ id }: { id: string }) {
   const isUnfiltered = Boolean(character?.unfiltered);
 
   return (
-    <div className="flex h-screen bg-[#0a0a0c] text-white">
+    <div className="flex h-screen bg-[#030708] text-white">
       <Sidebar />
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* HEADER */}
-        <header className="p-4 border-b border-white/5 bg-[#0f1115]/80 backdrop-blur-md flex items-center justify-between z-10">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="p-2 hover:bg-white/5 rounded-full transition" aria-label="Back to Dashboard">
+        <header className="p-4 border-b border-white/[0.06] bg-[#070d10]/90 backdrop-blur-md flex items-center justify-between z-10">
+          <div className="flex items-center gap-3.5">
+            <Link href="/dashboard" className="p-2 hover:bg-white/5 rounded-full transition text-slate-400 hover:text-white" aria-label="Back to Dashboard">
               <ChevronLeft size={20} />
             </Link>
             
-            <div className="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center overflow-hidden shadow-lg flex-shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-[#152328] border border-white/10 flex items-center justify-center overflow-hidden shadow-lg flex-shrink-0">
               {character?.avatar ? (
                 <img src={character.avatar} className="w-full h-full object-cover" alt={character.name} />
               ) : (
-                <span className="font-black text-blue-500 uppercase italic">{character?.name?.[0] || 'A'}</span>
+                <span className="font-bold text-[#7be4d5] uppercase italic text-sm">{character?.name?.[0] || 'S'}</span>
               )}
             </div>
 
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="font-bold text-base leading-none">{character?.name || 'Connecting...'}</h2>
+                <h2 className="font-bold text-sm md:text-base leading-none text-white">{character?.name || 'Connecting...'}</h2>
 
                 {/* SFW ROMANCE VS 18+ VISUAL BADGE */}
                 {isUnfiltered ? (
-                  <span className="bg-red-600/20 text-red-400 border border-red-500/30 text-[8px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                  <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
                     <Lock size={10} /> 18+ Uncensored
                   </span>
                 ) : (
-                  <span className="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[8px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                  <span className="bg-[#7be4d5]/10 text-[#7be4d5] border border-[#7be4d5]/20 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
                     <Heart size={10} fill="currentColor" /> SFW Romance
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-[10px] text-green-500 font-bold uppercase flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Online
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[10px] text-emerald-400 font-semibold uppercase flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" /> Active
                 </span>
                 {chatInfo && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/5 rounded-full border border-white/10">
-                    <span className="text-[9px] text-slate-500 uppercase font-black">Mood:</span>
-                    <span className="text-[9px] text-blue-400 font-bold uppercase">{chatInfo.mood || 'Neutral'}</span>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/5 rounded-full border border-white/5">
+                    <span className="text-[9px] text-slate-400 uppercase font-bold">Mood:</span>
+                    <span className="text-[9px] text-[#7be4d5] font-semibold uppercase">{chatInfo.mood || 'Neutral'}</span>
                   </div>
                 )}
               </div>
@@ -325,7 +326,7 @@ export default function ChatClient({ id }: { id: string }) {
             type="button"
             onClick={handleRegenerate} 
             disabled={isTyping || isLoading} 
-            className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-colors disabled:opacity-30 cursor-pointer"
+            className="p-2 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition-colors disabled:opacity-30 cursor-pointer"
             title="Regenerate last response"
           >
             <RotateCcw size={18} />
@@ -335,7 +336,7 @@ export default function ChatClient({ id }: { id: string }) {
         {/* CHAT BUBBLE STREAM */}
         <div 
           ref={scrollRef} 
-          className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-900/5 via-transparent to-transparent"
+          className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#7be4d5]/5 via-transparent to-transparent"
         >
           {messages.map((msg, i) => {
             if (msg.role === 'ASSISTANT' && msg.content === '' && i === messages.length - 1) return null;
@@ -351,12 +352,12 @@ export default function ChatClient({ id }: { id: string }) {
               >
                 <div className={`relative max-w-[85%] md:max-w-[70%] p-4 rounded-2xl shadow-sm ${
                   msg.role === 'USER' 
-                    ? 'bg-blue-600 text-white rounded-tr-none' 
+                    ? 'bg-[#153438] text-white rounded-tr-none border border-[#7be4d5]/30' 
                     : isSystemError 
-                      ? 'bg-red-950/40 border border-red-500/50 text-red-200' 
-                      : 'bg-[#16191f] text-slate-200 rounded-tl-none border border-white/5'
+                      ? 'bg-rose-950/40 border border-rose-500/40 text-rose-200' 
+                      : 'bg-[#0b1317] text-slate-200 rounded-tl-none border border-white/[0.06]'
                 }`}>
-                  {isSystemError && <AlertTriangle size={14} className="mb-2 text-red-500 inline mr-1" />}
+                  {isSystemError && <AlertTriangle size={14} className="mb-2 text-rose-400 inline mr-1" />}
 
                   {/* INLINE EDIT MODE */}
                   {isCurrentlyEditing ? (
@@ -364,7 +365,7 @@ export default function ChatClient({ id }: { id: string }) {
                       <textarea
                         value={editInput}
                         onChange={(e) => setEditInput(e.target.value)}
-                        className="w-full bg-[#1c2026] text-white p-3 rounded-xl border border-white/20 focus:outline-none focus:border-blue-400 text-sm md:text-base resize-none"
+                        className="w-full bg-[#05090a] text-white p-3 rounded-xl border border-white/20 focus:outline-none focus:border-[#7be4d5] text-sm md:text-base resize-none"
                         rows={Math.min(5, Math.max(2, editInput.split('\n').length))}
                         autoFocus
                       />
@@ -372,7 +373,7 @@ export default function ChatClient({ id }: { id: string }) {
                         <button
                           type="button"
                           onClick={() => setEditingMsgId(null)}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-white/10 hover:bg-white/20 transition cursor-pointer flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-white/10 hover:bg-white/20 transition cursor-pointer flex items-center gap-1"
                         >
                           <X size={13} /> Cancel
                         </button>
@@ -380,9 +381,9 @@ export default function ChatClient({ id }: { id: string }) {
                           type="button"
                           disabled={!editInput.trim() || editInput.trim() === msg.content}
                           onClick={() => handleSaveEdit(msg.id)}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-500 hover:bg-blue-400 disabled:opacity-50 transition cursor-pointer flex items-center gap-1 shadow-md shadow-blue-950/40"
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold text-black bg-[#7be4d5] hover:bg-[#6bd6c7] disabled:opacity-50 transition cursor-pointer flex items-center gap-1"
                         >
-                          <Check size={13} /> Save & Generate
+                          <Check size={13} /> Save & Send
                         </button>
                       </div>
                     </div>
@@ -397,7 +398,7 @@ export default function ChatClient({ id }: { id: string }) {
                     <button 
                       type="button"
                       onClick={() => handleOpenEdit(msg)} 
-                      className="absolute -left-9 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[#16191f] sm:bg-transparent text-slate-400 hover:text-white sm:opacity-0 sm:group-hover:opacity-100 transition-all cursor-pointer shadow-md sm:shadow-none"
+                      className="absolute -left-9 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[#0b1317] sm:bg-transparent text-slate-400 hover:text-white sm:opacity-0 sm:group-hover:opacity-100 transition-all cursor-pointer shadow-md sm:shadow-none"
                       title="Edit message (Generates new response)"
                       aria-label="Edit last message"
                     >
@@ -412,21 +413,21 @@ export default function ChatClient({ id }: { id: string }) {
           {isTyping && (messages.length === 0 || messages[messages.length - 1]?.content === '') && (
             <div className="flex justify-start">
               <div className="flex flex-col gap-2">
-                <span className="text-[10px] text-slate-500 ml-1 uppercase font-bold tracking-widest">
-                  {character?.name || 'Character'} is thinking
+                <span className="text-[10px] text-slate-400 ml-1 uppercase font-semibold tracking-wider">
+                  {character?.name || 'Character'} is typing...
                 </span>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-slate-800 border border-white/10 overflow-hidden flex items-center justify-center shadow-lg">
+                  <div className="w-8 h-8 rounded-xl bg-[#152328] border border-white/10 overflow-hidden flex items-center justify-center shadow-lg">
                     {character?.avatar ? (
-                      <img src={character.avatar} className="w-full h-full object-cover" alt="Thinking" />
+                      <img src={character.avatar} className="w-full h-full object-cover" alt="Typing" />
                     ) : (
-                      <span className="font-black text-blue-500 uppercase italic text-[10px]">{character?.name?.[0] || 'A'}</span>
+                      <span className="font-bold text-[#7be4d5] uppercase italic text-[10px]">{character?.name?.[0] || 'S'}</span>
                     )}
                   </div>
-                  <div className="bg-[#16191f] border border-white/5 p-4 rounded-2xl rounded-tl-none flex gap-1 w-fit animate-pulse">
-                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" />
+                  <div className="bg-[#0b1317] border border-white/[0.06] p-3.5 rounded-2xl rounded-tl-none flex gap-1 w-fit animate-pulse">
+                    <span className="w-1.5 h-1.5 bg-[#7be4d5] rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1.5 h-1.5 bg-[#7be4d5] rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1.5 h-1.5 bg-[#7be4d5] rounded-full animate-bounce" />
                   </div>
                 </div>
               </div>
@@ -435,22 +436,22 @@ export default function ChatClient({ id }: { id: string }) {
         </div>
 
         {/* INPUT FORM */}
-        <form onSubmit={sendMessage} className="p-4 bg-[#0f1115] border-t border-white/5">
+        <form onSubmit={sendMessage} className="p-4 bg-[#070d10] border-t border-white/[0.06]">
           <div className="max-w-4xl mx-auto flex gap-3">
             <input 
               value={input} 
               onChange={(e) => setInput(e.target.value)} 
-              placeholder={isLoading ? 'Synchronizing neural link...' : isTyping ? 'Generating response...' : `Message ${character?.name || 'Character'}...`} 
+              placeholder={isLoading ? 'Connecting with character...' : isTyping ? 'Generating reply...' : `Message ${character?.name || 'Character'}...`} 
               disabled={isTyping || isLoading} 
-              className="flex-1 bg-[#1c2026] text-white p-4 rounded-2xl border border-white/5 focus:outline-none focus:border-blue-500 transition-all placeholder:text-slate-600 disabled:opacity-50 text-sm" 
+              className="flex-1 bg-[#0d161a] text-white p-3.5 md:p-4 rounded-2xl border border-white/10 focus:outline-none focus:border-[#7be4d5] transition-all placeholder:text-slate-500 disabled:opacity-50 text-sm" 
             />
             <button 
               type="submit" 
               disabled={!input.trim() || isTyping || isLoading} 
-              className="bg-blue-600 p-4 rounded-2xl text-white hover:bg-blue-700 transition-all disabled:opacity-50 shadow-lg shadow-blue-900/20 cursor-pointer"
+              className="bg-[#7be4d5] p-3.5 md:p-4 rounded-2xl text-black hover:bg-[#6bd6c7] transition-all disabled:opacity-50 shadow-md shadow-[#7be4d5]/10 cursor-pointer"
               aria-label="Send message"
             >
-              <Send size={20} />
+              <Send size={18} />
             </button>
           </div>
         </form>

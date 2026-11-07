@@ -13,14 +13,16 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { PersonasService } from '../users/personas.service';
+import { UsersService } from '../users/users.service'; // <--- 1. Import UsersService
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
   constructor(
-    private authService: AuthService,
-    private personasService: PersonasService,
+    private readonly authService: AuthService,
+    private readonly personasService: PersonasService,
+    private readonly usersService: UsersService, // <--- 2. Inject UsersService
   ) {}
 
   @Post('signup')
@@ -49,14 +51,17 @@ export class AuthController {
       const result = await this.authService.googleLogin(req);
       return res.redirect(`${frontendUrl}/auth/callback?token=${result.access_token}`);
     } catch (err: any) {
-      return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent(err.message || 'Authentication failed')}`);
+      return res.redirect(
+        `${frontendUrl}/auth/login?error=${encodeURIComponent(err.message || 'Authentication failed')}`,
+      );
     }
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Patch('update-profile')
   async updateProfile(@Req() req: any, @Body() body: { bio: string }) {
-    return this.personasService.updateBio(req.user.id, body.bio);
+    // <--- 3. Call UsersService instead of PersonasService
+    return this.usersService.updateBio(req.user.id, body.bio);
   }
 
   @UseGuards(AuthGuard('jwt'))
@@ -67,7 +72,7 @@ export class AuthController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post('personas')
-  async createPersona(@Req() req: any, @Body() body: { name: string; description: string }) {
+  async createPersona(@Req() req: any, @Body() body: { name: string; description?: string }) {
     return this.personasService.createPersona(req.user.id, body);
   }
 
@@ -106,7 +111,11 @@ export class AuthController {
 
   @UseGuards(AuthGuard('jwt'))
   @Patch('personas/:id')
-  async updatePersona(@Req() req: any, @Param('id') id: string, @Body() body: any) {
+  async updatePersona(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { name?: string; description?: string },
+  ) {
     return this.personasService.updatePersona(req.user.id, id, body);
   }
 

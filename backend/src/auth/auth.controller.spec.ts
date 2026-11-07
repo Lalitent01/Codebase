@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { PersonasService } from '../users/personas.service';
-
+import { UsersService } from '../users/users.service';
 describe('AuthController', () => {
   let controller: AuthController;
 
@@ -12,6 +12,7 @@ describe('AuthController', () => {
       providers: [
         { provide: AuthService, useValue: {} },
         { provide: PersonasService, useValue: {} },
+        { provide: UsersService, useValue: {} },
       ],
     }).compile();
 

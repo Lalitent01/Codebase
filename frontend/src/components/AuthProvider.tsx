@@ -31,7 +31,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     if (!isMounted) return;
 
     // Hard redirect only for strictly authenticated areas
-    const privateRoutes = ['/chat/', '/profile', '/admin', '/chats'];
+    const privateRoutes = ['/chat/', '/profile', '/admin', '/chats', '/personas'];
     const isPrivateRoute = privateRoutes.some((path) => pathname.startsWith(path));
 
     const hasStoredToken = typeof window !== 'undefined' && !!localStorage.getItem('token');

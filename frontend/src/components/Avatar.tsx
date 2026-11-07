@@ -9,9 +9,9 @@ interface AvatarProps {
 export default function Avatar({ src, name = 'User', size = 'md' }: AvatarProps) {
   const sizeClasses = {
     sm: 'w-8 h-8 text-xs',
-    md: 'w-12 h-12 text-sm',
-    lg: 'w-24 h-24 text-2xl',
-    xl: 'w-32 h-32 text-4xl',
+    md: 'w-10 h-10 text-sm',
+    lg: 'w-20 h-20 text-xl',
+    xl: 'w-28 h-28 text-3xl',
   };
 
   if (src) {
@@ -19,14 +19,14 @@ export default function Avatar({ src, name = 'User', size = 'md' }: AvatarProps)
       <img 
         src={src} 
         alt={name || 'Avatar'} 
-        className={`${sizeClasses[size]} rounded-[1.5rem] object-cover border border-white/10`} 
+        className={`${sizeClasses[size]} rounded-2xl object-cover border border-white/10`} 
       />
     );
   }
 
   return (
     <div 
-      className={`${sizeClasses[size]} rounded-[1.5rem] bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center font-black text-white uppercase italic border border-white/10 shadow-lg select-none`}
+      className={`${sizeClasses[size]} rounded-2xl bg-[#152328] border border-[#7be4d5]/30 flex items-center justify-center font-bold text-[#7be4d5] uppercase select-none`}
     >
       {name?.charAt(0) || '?'}
     </div>

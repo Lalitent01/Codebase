@@ -1,61 +1,66 @@
 # ==========================================
-# 1. BUILD STAGE
+# 1. DEPENDENCY & BUILD STAGE
 # ==========================================
 FROM node:20-slim AS builder
 
-# Install OpenSSL (required by Prisma engine)
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# Install OpenSSL for Prisma engine binary compilation
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy dependency manifests and Prisma schema
+# Copy dependency manifests
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install ALL dependencies (including devDependencies for building)
+# Clean install including devDependencies
 RUN npm ci
 
-# Generate Prisma Client
+# Generate Prisma Client code
 RUN npx prisma generate
 
-# Copy the rest of the application source code
+# Copy source code
 COPY . .
 
-# Build the NestJS application
+# Build NestJS production bundle
 RUN npm run build
 
-# Remove development dependencies to keep the final image small
+# Prune devDependencies to keep image lean
 RUN npm prune --omit=dev
+
+# Re-run prisma generate to guarantee binaries reside in pruned node_modules
+RUN npx prisma generate
 
 # ==========================================
 # 2. PRODUCTION RUNNER STAGE
 # ==========================================
 FROM node:20-slim AS runner
 
-# Install OpenSSL for Prisma runtime
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# Install OpenSSL runtime dependency required by Prisma
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy only production dependencies, build output, and prisma files
+ENV NODE_ENV=production
+ENV PORT=3001
+ENV TRANSFORMERS_CACHE=/app/.cache
+
+# Copy files from builder stage
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
 
-# Set production environment variables
-ENV NODE_ENV=production
-ENV PORT=3001
-
-# Set cache path for Xenova/transformers embedding models
-ENV TRANSFORMERS_CACHE=/app/.cache
+# Create cache directory with correct permissions for non-root user
 RUN mkdir -p /app/.cache && chown -R node:node /app
 
-# Expose backend port
-EXPOSE 3001
-
-# Switch to non-root user for security
+# Drop root privileges
 USER node
 
-# Start NestJS (checks if compiled to dist/main.js or dist/src/main.js)
+EXPOSE 3001
+
+# Healthcheck to verify NestJS is up and serving requests
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3001/health', (r) => {if (r.statusCode !== 200) process.exit(1)})"
+
+# Start the application
 CMD ["sh", "-c", "if [ -f dist/main.js ]; then node dist/main.js; else node dist/src/main.js; fi"]

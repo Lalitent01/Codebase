@@ -17,17 +17,17 @@ export default function GuestWelcomeBanner() {
   useEffect(() => {
     setMounted(true);
 
-    // Only show to unauthenticated guests
+    // Only show to unauthenticated visitors
     if (token) return;
 
-    // Do not show on auth pages or full-screen chat
+    // Do not show on auth pages or active chat sessions
     if (pathname.startsWith('/auth/') || pathname.startsWith('/chat/')) return;
 
-    // Check if previously dismissed in this session
+    // Check if dismissed during this session
     const isDismissed = sessionStorage.getItem('suroor_welcome_dismissed');
     if (isDismissed) return;
 
-    // Smooth entry delay (2.5 seconds after page loads)
+    // Smooth entry after page exploration
     const timer = setTimeout(() => {
       setIsOpen(true);
     }, 2500);
@@ -45,82 +45,80 @@ export default function GuestWelcomeBanner() {
     openAuthModal('signup');
   };
 
-  // Don't render anything if mounted state is not ready, user is logged in, or banner is closed
   if (!mounted || token || !isOpen) return null;
 
   return (
     <aside
       aria-label="Welcome perks for new guests"
-      className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 max-w-md w-full animate-in fade-in slide-in-from-bottom-8 duration-500"
+      className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 max-w-md w-full animate-in fade-in slide-in-from-bottom-6 duration-500"
     >
-      <div className="relative bg-[#0f1115]/95 backdrop-blur-2xl border border-blue-500/30 rounded-[2.5rem] p-6 shadow-[0_0_50px_rgba(37,99,235,0.3)] overflow-hidden">
+      <div className="relative bg-[#0a1013]/95 backdrop-blur-2xl border border-[#7be4d5]/30 rounded-3xl p-6 shadow-[0_0_50px_rgba(123,228,213,0.15)] overflow-hidden text-white">
         
-        {/* Ambient Neon Backlight Blob */}
-        <div className="absolute -top-12 -left-12 w-44 h-44 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 -right-10 w-44 h-44 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+        {/* Subtle Ambient Glow */}
+        <div className="absolute -top-12 -left-12 w-44 h-44 bg-[#7be4d5]/15 rounded-full blur-3xl pointer-events-none" />
 
         {/* Close Button */}
         <button
           type="button"
           onClick={handleDismiss}
-          className="absolute top-5 right-5 p-2 text-slate-500 hover:text-white rounded-full bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full bg-white/5 hover:bg-white/10 transition cursor-pointer"
           aria-label="Dismiss banner"
         >
           <X size={16} />
         </button>
 
-        {/* Content */}
+        {/* Header */}
         <div className="relative z-10 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-blue-900/40 flex-shrink-0 animate-pulse">
-              <Sparkles size={24} />
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-[#152328] border border-[#7be4d5]/40 flex items-center justify-center text-[#7be4d5] shadow-lg flex-shrink-0 animate-pulse">
+              <Sparkles size={22} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                  New Pilot Protocol
+                <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#7be4d5]/15 text-[#7be4d5] border border-[#7be4d5]/30">
+                  Welcome Gift
                 </span>
-                <span className="text-[9px] font-bold text-slate-500 uppercase">100% Free</span>
+                <span className="text-[9px] font-semibold text-slate-400 uppercase">100% Free</span>
               </div>
-              <h3 className="text-xl font-black italic tracking-tighter uppercase text-white mt-0.5">
-                Unlock Suroor Neural Link
+              <h3 className="text-lg font-black tracking-tight text-white mt-0.5">
+                Start Roleplaying on Suroor
               </h3>
             </div>
           </div>
 
           {/* Value Badges */}
-          <div className="grid grid-cols-2 gap-2 text-[11px] font-medium text-slate-300">
-            <div className="flex items-center gap-2 bg-white/5 border border-white/5 p-2.5 rounded-xl">
-              <Zap size={14} className="text-yellow-400 flex-shrink-0" />
-              <span>30 Daily Free Messages</span>
+          <div className="grid grid-cols-2 gap-2 text-xs font-medium text-slate-300">
+            <div className="flex items-center gap-2 bg-black/40 border border-white/5 p-2.5 rounded-xl">
+              <Zap size={14} className="text-amber-400 flex-shrink-0" />
+              <span>30 Daily Free Sparks</span>
             </div>
-            <div className="flex items-center gap-2 bg-white/5 border border-white/5 p-2.5 rounded-xl">
-              <Gift size={14} className="text-purple-400 flex-shrink-0" />
-              <span>Day 1–7 Loot Boxes</span>
+            <div className="flex items-center gap-2 bg-black/40 border border-white/5 p-2.5 rounded-xl">
+              <Gift size={14} className="text-rose-400 flex-shrink-0" />
+              <span>Day 1–7 Welcome Chests</span>
             </div>
-            <div className="flex items-center gap-2 bg-white/5 border border-white/5 p-2.5 rounded-xl">
-              <Sparkles size={14} className="text-blue-400 flex-shrink-0" />
-              <span>Hinglish & Hindi Souls</span>
+            <div className="flex items-center gap-2 bg-black/40 border border-white/5 p-2.5 rounded-xl">
+              <Sparkles size={14} className="text-[#7be4d5] flex-shrink-0" />
+              <span>Hinglish & Hindi Characters</span>
             </div>
-            <div className="flex items-center gap-2 bg-white/5 border border-white/5 p-2.5 rounded-xl">
+            <div className="flex items-center gap-2 bg-black/40 border border-white/5 p-2.5 rounded-xl">
               <Shield size={14} className="text-emerald-400 flex-shrink-0" />
-              <span>Private & Encrypted</span>
+              <span>100% Private & Disagree-Free</span>
             </div>
           </div>
 
-          {/* Action CTA */}
-          <div className="pt-2 flex items-center gap-3">
+          {/* Call to Actions */}
+          <div className="pt-1 flex items-center gap-2.5">
             <button
               type="button"
               onClick={handleClaim}
-              className="flex-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:brightness-110 text-white py-3.5 px-6 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+              className="flex-1 bg-[#7be4d5] hover:bg-[#6bd6c7] text-black py-3 px-5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              Claim Free Energy <ArrowRight size={14} />
+              Claim Free Sparks <ArrowRight size={14} />
             </button>
             <button
               type="button"
               onClick={handleDismiss}
-              className="px-4 py-3.5 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition cursor-pointer"
             >
               Later
             </button>

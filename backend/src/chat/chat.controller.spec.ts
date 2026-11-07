@@ -13,11 +13,52 @@ describe('ChatController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ChatController],
       providers: [
-        { provide: ChatService, useValue: {} },
-        { provide: AiService, useValue: {} },
-        { provide: ModerationService, useValue: { validateMessage: () => true } },
-        { provide: AnalyticsService, useValue: {} },
-        { provide: PrismaService, useValue: {} },
+        {
+          provide: ChatService,
+          useValue: {
+            findOrCreateChat: jest.fn(),
+            getRecentChatsSidebar: jest.fn(),
+            saveMessage: jest.fn(),
+            deleteChatSession: jest.fn(),
+            getChatWithCharacter: jest.fn(),
+            deductCredit: jest.fn(),
+            retrieveRelevantMemories: jest.fn(),
+            saveToLongTermMemory: jest.fn(),
+            invalidateChatCache: jest.fn(),
+          },
+        },
+        {
+          provide: AiService,
+          useValue: {
+            moderateContent: jest.fn().mockResolvedValue({ safe: true }),
+            getChatResponseStream: jest.fn(),
+            summarizeHistory: jest.fn(),
+          },
+        },
+        {
+          provide: ModerationService,
+          useValue: {
+            validateMessage: jest.fn().mockReturnValue(true),
+          },
+        },
+        {
+          provide: AnalyticsService,
+          useValue: {
+            track: jest.fn(),
+            handleQuestTrigger: jest.fn(),
+          },
+        },
+        {
+          provide: PrismaService,
+          useValue: {
+            chat: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+            user: { findUnique: jest.fn() },
+            message: { findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn() },
+            $transaction: jest.fn((cb) => cb({
+              message: { update: jest.fn(), deleteMany: jest.fn() },
+            })),
+          },
+        },
       ],
     }).compile();
 

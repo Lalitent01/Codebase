@@ -1,4 +1,5 @@
 -- CreateTable
+CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE "Memory" (
     "id" TEXT NOT NULL,
     "content" TEXT NOT NULL,

@@ -5,11 +5,10 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
-// 1. Fetch character data for browser tab title & SEO metadata
+// 1. Dynamic Browser Tab Title & Search Crawler Rules
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
 
-  // Use internal backend URL on server if available, otherwise public API URL
   const rawBase = process.env.BACKEND_URL 
     ? `${process.env.BACKEND_URL}/api` 
     : (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api');
@@ -26,11 +25,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const char = await res.json();
 
     return {
-      title: `Chat with ${char.name} | Suroor`,
-      description: `Ongoing conversation with ${char.name}.`,
+      title: `Chat with ${char.name} | Suroor AI`,
+      description: `Private conversation with ${char.name} in Hinglish, Hindi, and English.`,
+      // Active chat sessions should NOT be indexed in Google search
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   } catch {
-    return { title: 'Neural Link Active | Suroor' };
+    return { 
+      title: 'Private Chat | Suroor AI',
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
   }
 }
 

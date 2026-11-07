@@ -1,7 +1,8 @@
 'use client';
+
 import LegalLayout from '@/components/LegalLayout';
 import { 
-  Coins, 
+  Zap, 
   Clock, 
   CreditCard, 
   RotateCcw, 
@@ -13,27 +14,29 @@ import {
 
 export default function RefundPolicyPage() {
   return (
-    <LegalLayout title="Payments & Refunds" lastUpdated="July 2, 2026">
+    <LegalLayout title="Payments & Cancellation Policy" lastUpdated="July 2, 2026">
       <div className="space-y-10 pb-20">
         
         {/* INTRODUCTION */}
-        <section className="bg-emerald-600/5 border border-emerald-600/10 p-6 rounded-3xl">
-          <p className="text-slate-300 leading-relaxed">
-            This Payments & Refunds Policy explains how purchases made on **Suroor** are handled. We aim to provide transparency regarding our digital goods and premium access tiers.
+        <section className="bg-[#7be4d5]/5 border border-[#7be4d5]/15 p-6 rounded-3xl">
+          <p className="text-slate-300 leading-relaxed text-sm md:text-base">
+            This policy outlines billing terms, cancellation rights, and refund procedures for digital passes and credits purchased on <strong className="text-white">Suroor AI</strong>.
           </p>
         </section>
 
-        {/* 01. VIRTUAL CREDITS */}
-        <Section num="01" title="Virtual Credits" icon={<Coins size={20} />}>
-          <p>Suroor offers virtual credits that can be used to access premium features within the Service. Please note that Virtual Credits:</p>
-          <ul className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-4">
+        {/* 01. VIRTUAL CREDITS & SPARKS */}
+        <Section num="01" title="Virtual Sparks & Credits" icon={<Zap size={20} />}>
+          <p>
+            Suroor offers virtual energy (&ldquo;Sparks&rdquo;) for accessing high-fidelity AI interactions. Virtual items:
+          </p>
+          <ul className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-4 text-xs">
             {[
-              "Have no cash value",
-              "Non-transferable between users",
-              "Cannot be exchanged for money"
+              "Carry no real-world monetary value",
+              "Are non-transferable between accounts",
+              "Cannot be redeemed for cash or currency"
             ].map(item => (
-              <li key={item} className="flex items-center gap-2 text-xs bg-white/5 p-3 rounded-xl border border-white/5">
-                <div className="w-1 h-1 bg-emerald-500 rounded-full" />
+              <li key={item} className="flex items-center gap-2 bg-black/40 p-3 rounded-xl border border-white/5 text-slate-300">
+                <div className="w-1.5 h-1.5 bg-[#7be4d5] rounded-full shrink-0" />
                 {item}
               </li>
             ))}
@@ -42,91 +45,74 @@ export default function RefundPolicyPage() {
 
         {/* 02. TIME PASSES */}
         <Section num="02" title="Time Passes" icon={<Clock size={20} />}>
-          <p>Time Passes provide temporary access to eligible premium features for the duration specified at the time of purchase.</p>
-          <p className="mt-3 bg-white/5 p-4 rounded-2xl italic border-l-2 border-emerald-500">
-            Time Passes expire automatically at the end of their validity period and cannot be extended unless otherwise stated during the checkout process.
+          <p className="text-xs md:text-sm leading-relaxed">
+            Time Passes provide unlimited messaging privileges for the specified duration (e.g. 24 Hours, Weekly). Validity begins immediately upon confirmed payment and terminates automatically when the hours expire.
           </p>
         </Section>
 
-        {/* 03. PAYMENTS */}
-        <Section num="03" title="Payments" icon={<CreditCard size={20} />}>
-          <p>All purchases are processed through secure third-party payment providers to ensure your financial data remains encrypted and safe.</p>
-          <ul className="list-disc pl-6 mt-4 space-y-2">
-            <li>Prices may change at any time without prior notice.</li>
-            <li>Any applicable taxes will be shown during checkout where required by law.</li>
-            <li>We do not store your full credit card details on our local servers.</li>
-          </ul>
+        {/* 03. PAYMENT GATEWAYS */}
+        <Section num="03" title="Payment Processing" icon={<CreditCard size={20} />}>
+          <p className="text-xs md:text-sm leading-relaxed">
+            Transactions are processed through verified payment aggregators (including Razorpay) supporting UPI (GPay, PhonePe, Paytm), Netbanking, and Debit/Credit Cards. We do not store full card credentials on our servers.
+          </p>
         </Section>
 
-        {/* 04. REFUNDS */}
-        <Section num="04" title="Refunds" icon={<RotateCcw size={20} />} color="text-amber-500" border="border-amber-500/20" bg="bg-amber-500/5">
-          <p className="font-bold text-white mb-4">
-            As virtual credits and Time Passes are digital products delivered immediately, all purchases are generally final and non-refundable.
+        {/* 04. REFUNDS & CANCELLATION */}
+        <Section num="04" title="Refunds & Exceptions" icon={<RotateCcw size={20} />} color="text-amber-400" border="border-amber-500/20" bg="bg-amber-500/5">
+          <p className="font-semibold text-white mb-3 text-xs md:text-sm">
+            Due to the instantaneous digital fulfillment of virtual credits and passes, purchases are generally final and non-refundable once unlocked.
           </p>
-          <div className="mt-4 p-4 border-y border-white/5 space-y-4">
-            <p className="text-xs uppercase tracking-widest text-slate-500">Exceptions may apply if:</p>
+          <div className="p-4 bg-black/40 rounded-2xl border border-white/5 space-y-2.5 text-xs text-slate-300">
+            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Exceptions honored by support:</p>
             <ul className="space-y-2">
               <li className="flex items-start gap-2">
-                <Receipt size={14} className="mt-1 text-amber-500" />
-                <span>You were charged multiple times for the same purchase.</span>
+                <Receipt size={14} className="mt-0.5 text-amber-400 shrink-0" />
+                <span>Duplicate billing caused by network interruptions during payment authorization.</span>
               </li>
               <li className="flex items-start gap-2">
-                <Receipt size={14} className="mt-1 text-amber-500" />
-                <span>A technical issue prevented delivery of your purchase.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Receipt size={14} className="mt-1 text-amber-500" />
-                <span>A refund is required under applicable local law.</span>
+                <Receipt size={14} className="mt-0.5 text-amber-400 shrink-0" />
+                <span>Verified technical failure where digital assets were not credited to the account.</span>
               </li>
             </ul>
           </div>
-          <p className="mt-4 text-xs text-slate-500 italic text-center">
-            Refund requests are reviewed on a case-by-case basis.
+          <p className="mt-3 text-xs text-slate-400">
+            To submit a claim, email your order ID and payment receipt to <a href="mailto:support@suroor.cc" className="text-[#7be4d5] underline">support@suroor.cc</a> within 7 days of the charge.
           </p>
         </Section>
 
-        {/* 05. FRAUD & ABUSE */}
-        <Section num="05" title="Fraud & Abuse" icon={<AlertTriangle size={20} />} color="text-red-500">
-          <p>We reserve the right to take action to protect the platform. This includes suspending accounts, cancelling purchases, or revoking virtual items obtained through:</p>
-          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
-            {["Payment disputes", "Chargebacks", "Unauthorized activity", "Fraudulent identity"].map(item => (
-              <li key={item} className="text-xs bg-red-500/5 p-2 rounded-lg border border-red-500/10 text-red-200/60">
-                • {item}
-              </li>
-            ))}
-          </ul>
+        {/* 05. DISPUTES & CHARGEBACKS */}
+        <Section num="05" title="Fraud Prevention" icon={<AlertTriangle size={20} />} color="text-rose-400">
+          <p className="text-xs md:text-sm leading-relaxed">
+            We reserve the right to revoke virtual balances or suspend accounts associated with fraudulent activity, unauthorized credit card usage, or malicious chargebacks.
+          </p>
         </Section>
 
-        {/* 06. CHANGES */}
-        <Section num="06" title="Changes" icon={<RefreshCcw size={20} />}>
-          <p>We may update this Payments & Refunds Policy from time to time. Continued use of the Service after changes become effective constitutes acceptance of the updated policy.</p>
+        {/* 06. CONTACT */}
+        <Section num="06" title="Support" icon={<Mail size={20} />}>
+          <p className="text-xs md:text-sm">
+            For billing discrepancies or payment inquiries, contact our billing desk at <a href="mailto:support@suroor.cc" className="text-[#7be4d5] underline">support@suroor.cc</a>.
+          </p>
         </Section>
 
-        {/* 07. CONTACT */}
-        <Section num="07" title="Contact" icon={<Mail size={20} />}>
-          <p>For payment-related questions, transaction discrepancies, or refund requests, please contact us through the support details available on the Suroor dashboard or help center.</p>
-        </Section>
-
-        <footer className="pt-10 border-t border-white/5 text-center">
-          <p className="text-[10px] text-slate-600 font-black uppercase tracking-[0.4em]">Financial Protocol Verified</p>
+        <footer className="pt-8 border-t border-white/[0.08] text-center">
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Suroor Financial Compliance Standards</p>
         </footer>
       </div>
     </LegalLayout>
   );
 }
 
-// Helper Component (Same as Privacy Page for consistency)
-function Section({ num, title, icon, children, color = "text-emerald-500", bg = "bg-[#0a0a0c]", border = "border-white/5" }: any) {
+function Section({ num, title, icon, children, color = "text-[#7be4d5]", bg = "bg-[#0a1013]", border = "border-white/[0.06]" }: any) {
   return (
-    <section className={`p-8 rounded-[2rem] border ${border} ${bg} transition-all hover:border-white/10`}>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <span className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-black text-sm ${color}`}>{num}</span>
-          <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">{title}</h2>
+    <section className={`p-6 md:p-8 rounded-3xl border ${border} ${bg} transition-all`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3.5">
+          <span className={`w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center font-bold text-xs ${color}`}>{num}</span>
+          <h2 className="text-lg md:text-xl font-bold tracking-tight text-white">{title}</h2>
         </div>
-        <div className="text-slate-700">{icon}</div>
+        <div className="text-slate-400">{icon}</div>
       </div>
-      <div className="text-slate-400 text-sm leading-relaxed">
+      <div className="text-slate-300 text-xs md:text-sm leading-relaxed">
         {children}
       </div>
     </section>

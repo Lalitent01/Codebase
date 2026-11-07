@@ -10,8 +10,25 @@ describe('AnalyticsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AnalyticsService,
-        { provide: PrismaService, useValue: {} },
-        { provide: LootService, useValue: {} },
+        {
+          provide: PrismaService,
+          useValue: {
+            user: { findUnique: jest.fn(), update: jest.fn() },
+            analyticsEvent: { create: jest.fn(), count: jest.fn() },
+            quest: { findMany: jest.fn() },
+            userQuestProgress: { findFirst: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
+            $transaction: jest.fn((cb) => cb({
+              userQuestProgress: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+              user: { update: jest.fn() },
+            })),
+          },
+        },
+        {
+          provide: LootService,
+          useValue: {
+            addChestToInventory: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

@@ -47,7 +47,7 @@ export const useFilterStore = create<FilterState>()(
         }),
     }),
     {
-      name: 'suroor-dashboard-filters',
+      name: 'suroor-discovery-filters',
       storage: createJSONStorage(() => localStorage),
     },
   ),

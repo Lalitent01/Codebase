@@ -18,7 +18,7 @@ import { OptionalJwtAuthGuard } from './optional-jwt-auth.guard';
 
 @Controller('characters')
 export class CharactersController {
-  constructor(private charactersService: CharactersService) {}
+  constructor(private readonly charactersService: CharactersService) {}
 
   @Post()
   @UseGuards(AuthGuard('jwt'))
@@ -76,7 +76,7 @@ export class CharactersController {
       sort: sort || 'recommended',
       gender,
       language,
-      unfiltered: unfiltered === 'true',
+      unfiltered: unfiltered === 'true' ? true : unfiltered === 'false' ? false : undefined,
       page: parseInt(page || '1', 10),
       limit: parseInt(limit || '12', 10),
     });
@@ -113,7 +113,8 @@ export class CharactersController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.charactersService.findOne(id);
+  @UseGuards(OptionalJwtAuthGuard)
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    return this.charactersService.findOne(id, req.user?.id || null);
   }
 }

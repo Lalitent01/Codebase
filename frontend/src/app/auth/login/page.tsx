@@ -25,7 +25,10 @@ function LoginForm() {
     setErrorMsg('');
 
     try {
-      const res = await api.post('/auth/login', { email, password });
+      const res = await api.post('/auth/login', { 
+        email: email.trim().toLowerCase(), 
+        password 
+      });
       setAuth(res.data.user, res.data.access_token);
       router.push('/dashboard');
     } catch (err: any) {
@@ -37,29 +40,33 @@ function LoginForm() {
   };
 
   const handleGoogleLogin = () => {
-    const rawApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
+    const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
     const apiUrl = rawApiUrl.replace(/\/$/, '');
     window.location.href = `${apiUrl}/auth/google`;
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black p-4">
-      <div className="bg-slate-900 p-8 rounded-2xl shadow-xl flex flex-col gap-4 w-full max-w-md border border-white/5">
-        <h1 className="text-2xl font-bold text-white text-center">Welcome Back</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#030708] p-4 text-white">
+      <div className="bg-[#0a1013] p-8 rounded-3xl shadow-2xl flex flex-col gap-4 w-full max-w-md border border-white/[0.08]">
+        <div className="text-center mb-2">
+          <h1 className="text-2xl font-black tracking-tight">Welcome Back</h1>
+          <p className="text-xs text-slate-400 mt-1">Sign in to continue your private roleplay</p>
+        </div>
 
         {(errorMsg || urlError) && (
-          <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl font-medium">
+          <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl font-medium text-center">
             {errorMsg || urlError}
           </div>
         )}
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-500 uppercase ml-1 tracking-widest">Email Address</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
             <input 
               type="email" 
-              placeholder="email@example.com" 
-              className="p-3 w-full rounded-xl bg-slate-800 text-white border border-slate-700 focus:outline-none focus:border-blue-500 transition text-sm"
+              placeholder="you@example.com" 
+              autoComplete="email"
+              className="p-3.5 w-full rounded-xl bg-black/60 text-white border border-white/10 focus:outline-none focus:border-[#7be4d5] transition text-sm"
               value={email}
               onChange={(e) => setEmail(e.target.value)} 
               required
@@ -67,59 +74,60 @@ function LoginForm() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-500 uppercase ml-1 tracking-widest">Password</label>
-            <input 
-              type="password" 
-              placeholder="••••••••" 
-              className="p-3 w-full rounded-xl bg-slate-800 text-white border border-slate-700 focus:outline-none focus:border-blue-500 transition text-sm"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)} 
-              required
-            />
-            <div className="flex justify-end mt-1">
+            <div className="flex justify-between items-center px-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Password</label>
               <Link 
                 href="/auth/forgot-password" 
-                className="text-[10px] text-slate-500 hover:text-blue-400 font-bold uppercase tracking-tighter transition-colors"
+                className="text-[10px] text-slate-400 hover:text-[#7be4d5] font-semibold transition-colors"
               >
                 Forgot Password?
               </Link>
             </div>
+            <input 
+              type="password" 
+              placeholder="••••••••" 
+              autoComplete="current-password"
+              className="p-3.5 w-full rounded-xl bg-black/60 text-white border border-white/10 focus:outline-none focus:border-[#7be4d5] transition text-sm"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)} 
+              required
+            />
           </div>
 
           <button 
             type="submit" 
             disabled={loading}
-            className="bg-blue-600 text-white p-3 mt-2 rounded-xl font-bold hover:bg-blue-700 transition active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+            className="bg-[#7be4d5] text-black p-3.5 mt-2 rounded-xl font-bold uppercase tracking-wider text-xs hover:bg-[#6bd6c7] transition active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {loading && <Loader2 className="animate-spin" size={16} />}
+            {loading && <Loader2 className="animate-spin text-black" size={16} />}
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
         <div className="relative my-2">
-          <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-700"></span></div>
-          <div className="relative flex justify-center text-xs uppercase"><span className="bg-slate-900 px-2 text-slate-500 font-bold">Or</span></div>
+          <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/[0.08]"></span></div>
+          <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#0a1013] px-3 text-slate-500 font-bold">Or</span></div>
         </div>
 
         <button 
           onClick={handleGoogleLogin}
           type="button"
-          className="flex items-center justify-center gap-3 bg-white text-black py-3 rounded-xl font-bold hover:bg-slate-200 transition active:scale-[0.98]"
+          className="flex items-center justify-center gap-3 bg-white text-black py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200 transition active:scale-[0.98]"
         >
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="google" />
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="google" />
           Continue with Google
         </button>
 
-        <p className="text-slate-400 text-sm text-center mt-2">
-          Don&apos;t have an account? <Link href="/auth/signup" className="text-blue-400 hover:underline font-medium">Sign up</Link>
+        <p className="text-slate-400 text-xs text-center mt-2">
+          New to Suroor? <Link href="/auth/signup" className="text-[#7be4d5] hover:underline font-semibold ml-1">Create an account</Link>
         </p>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-10 text-[10px] text-slate-600 font-bold uppercase tracking-widest">
-        <Link href="/terms" className="hover:text-blue-500 transition-colors">Terms of Service</Link>
-        <Link href="/privacy" className="hover:text-blue-500 transition-colors">Privacy Policy</Link>
-        <Link href="/refund-policy" className="hover:text-blue-500 transition-colors">Refund Policy</Link>
-        <Link href="/contact" className="hover:text-blue-500 transition-colors underline decoration-blue-500/30">Contact / Support</Link>
+      <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-8 text-[11px] text-slate-500 font-medium tracking-wide">
+        <Link href="/terms" className="hover:text-slate-300 transition-colors">Terms of Service</Link>
+        <Link href="/privacy" className="hover:text-slate-300 transition-colors">Privacy Policy</Link>
+        <Link href="/refund-policy" className="hover:text-slate-300 transition-colors">Refund Policy</Link>
+        <Link href="/contact" className="hover:text-[#7be4d5] transition-colors">Support</Link>
       </div>
     </div>
   );
@@ -127,7 +135,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="bg-black min-h-screen" />}>
+    <Suspense fallback={<div className="bg-[#030708] min-h-screen" />}>
       <LoginForm />
     </Suspense>
   );

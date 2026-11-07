@@ -1,18 +1,29 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findById(id: string) {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
 
   async findOneByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email } });
+    return this.prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
   }
 
   async updateBio(userId: string, bio: string) {
+    const cleanBio = bio !== undefined ? bio.trim() : '';
+    if (cleanBio.length > 300) {
+      throw new BadRequestException('Bio must not exceed 300 characters.');
+    }
+
     return this.prisma.user.update({
       where: { id: userId },
-      data: { bio },
+      data: { bio: cleanBio },
     });
   }
 
@@ -33,15 +44,14 @@ export class UsersService {
   }
 
   async create(email: string, passwordHash: string | null, username: string) {
-    // If passwordHash is null, user signed up via Google OAuth (already verified)
     const isGoogleAuth = passwordHash === null;
 
     return this.prisma.user.create({
       data: {
-        email,
+        email: email.toLowerCase().trim(),
         passwordHash,
-        username,
-        isEmailVerified: isGoogleAuth, // Google users are verified by default
+        username: username.trim(),
+        isEmailVerified: isGoogleAuth, // Google OAuth accounts are pre-verified
       },
     });
   }

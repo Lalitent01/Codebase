@@ -9,34 +9,31 @@ interface FormattedMessageProps {
 export const FormattedMessage: React.FC<FormattedMessageProps> = ({ content }) => {
   if (!content) return null;
 
-  // Regex to split the text based on *asterisks* and (parentheses)
-  // This looks for *...* or (...) while keeping the delimiters
-  const parts = content.split(/(\*.*?\*|\(.*?\))/g);
+  // Regex to split on *action* descriptions and (internal thoughts)
+  const parts = content.split(/(\*[\s\S]*?\*|\(.*?\))/g);
 
   return (
     <span className="leading-relaxed">
       {parts.map((part, index) => {
-        // 1. STYLE ACTIONS (Italics + Slate color)
+        // 1. Actions / Scenery in *asterisks* (Italics + Soft muted slate)
         if (part.startsWith('*') && part.endsWith('*')) {
           return (
-            <span key={index} className="text-slate-400 italic">
+            <span key={index} className="text-slate-400 italic font-normal">
               {part}
             </span>
           );
         }
         
-        // 2. STYLE THOUGHTS (Italics + Sky Blue color)
+        // 2. Thoughts in (parentheses) (Italics + Subtle mint tint)
         if (part.startsWith('(') && part.endsWith(')')) {
           return (
-            <span key={index} className="text-sky-400 italic font-medium opacity-90">
+            <span key={index} className="text-[#7be4d5]/80 italic font-normal">
               {part}
             </span>
           );
         }
 
-        // 3. STYLE DIALOGUE (Default White)
-        // We can also explicitly style text inside quotes if you want, 
-        // but keeping standard text white is cleaner for mixed responses.
+        // 3. Spoken Dialogue (Clean crisp white)
         return (
           <span key={index} className="text-white">
             {part}

@@ -20,10 +20,8 @@ export default function WeeklyQuests() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Fetch on mount and whenever the user returns to the tab
   useEffect(() => { 
     fetchQuests(); 
-
     const onFocus = () => fetchQuests();
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
@@ -37,7 +35,6 @@ export default function WeeklyQuests() {
     }
   };
 
-  // 1-Click Instant Claim (No alert popup)
   const handleClaim = async (q: any) => {
     const progressId = q.id;
     if (claimingId || q.isClaimed || !q.isCompleted) return;
@@ -47,18 +44,15 @@ export default function WeeklyQuests() {
     try {
       const res = await api.post(`/analytics/quests/claim/${progressId}`);
       const rewardText = res.data.type === 'CREDITS' 
-        ? `+${res.data.reward} Credits Added!` 
+        ? `+${res.data.reward} Sparks Added!` 
         : '🎁 Chest Added to Vault!';
       
-      // Inline success feedback (no blocking browser alert)
       setClaimedNotice({ id: progressId, text: rewardText });
 
-      // Optimistically mark as claimed in local UI
       setQuests((prev) =>
         prev.map((item) => (item.id === progressId ? { ...item, isClaimed: true } : item))
       );
 
-      // Immediately refresh user balance in sidebar
       if (fetchUser) await fetchUser(); 
       fetchQuests();
     } catch (e: any) { 
@@ -69,28 +63,28 @@ export default function WeeklyQuests() {
     }
   };
 
-  if (loading) return <div className="h-32 w-full animate-pulse bg-white/5 rounded-[2.5rem] mb-10" />;
+  if (loading) return <div className="h-32 w-full animate-pulse bg-white/5 rounded-3xl mb-8" />;
   if (quests.length === 0) return null;
 
   return (
-    <div className="relative group bg-[#111318] border border-white/5 p-6 rounded-[2.5rem] mb-10 shadow-xl overflow-hidden">
-      <div className="flex justify-between items-center mb-6 px-2">
+    <div className="relative group bg-[#0a1013] border border-white/[0.06] p-6 rounded-3xl mb-8 shadow-xl overflow-hidden text-white">
+      <div className="flex justify-between items-center mb-5 px-1">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-500/20 rounded-xl text-purple-500">
+          <div className="p-2 bg-[#7be4d5]/10 rounded-xl text-[#7be4d5]">
             <Trophy size={18} />
           </div>
           <div>
-            <h2 className="text-base font-black uppercase italic tracking-tighter leading-none mb-1">Missions</h2>
-            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest text-blue-500 leading-none">
-              Neural Rewards
+            <h2 className="text-sm font-bold tracking-tight text-white leading-none mb-1">Roleplay Quests</h2>
+            <p className="text-[10px] text-slate-400 font-medium tracking-wider leading-none">
+              Complete goals to earn bonus sparks
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <button 
             type="button"
             onClick={() => scroll('left')} 
-            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg transition-colors border border-white/5 cursor-pointer"
+            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg transition text-slate-300 hover:text-white border border-white/5 cursor-pointer"
             aria-label="Previous Quests"
           >
             <ChevronLeft size={16} />
@@ -98,7 +92,7 @@ export default function WeeklyQuests() {
           <button 
             type="button"
             onClick={() => scroll('right')} 
-            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg transition-colors border border-white/5 cursor-pointer"
+            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg transition text-slate-300 hover:text-white border border-white/5 cursor-pointer"
             aria-label="Next Quests"
           >
             <ChevronRight size={16} />
@@ -120,22 +114,22 @@ export default function WeeklyQuests() {
             <div 
               key={q.id} 
               onClick={() => canClaim && handleClaim(q)}
-              className={`flex-shrink-0 w-[260px] snap-start p-5 rounded-3xl border transition-all relative select-none ${
+              className={`flex-shrink-0 w-[260px] snap-start p-4 rounded-2xl border transition-all relative select-none ${
                 q.isClaimed 
-                  ? 'bg-green-500/5 border-green-500/10 opacity-60' 
+                  ? 'bg-emerald-500/5 border-emerald-500/10 opacity-60' 
                   : canClaim 
-                    ? 'bg-blue-600/15 border-blue-500/50 shadow-lg shadow-blue-900/20 cursor-pointer hover:scale-[1.02] active:scale-95' 
-                    : 'bg-white/5 border-white/5'
+                    ? 'bg-[#7be4d5]/10 border-[#7be4d5]/40 shadow-lg cursor-pointer hover:scale-[1.02] active:scale-95' 
+                    : 'bg-white/[0.02] border-white/5'
               }`}
             >
-              <div className="flex justify-between items-start mb-4 h-10">
+              <div className="flex justify-between items-start mb-3 h-10">
                 <div className="flex-1 mr-2">
-                  <h4 className={`font-bold text-[11px] uppercase tracking-tight ${q.isClaimed ? 'text-slate-400' : 'text-white'}`}>
+                  <h4 className={`font-bold text-xs tracking-tight truncate ${q.isClaimed ? 'text-slate-400' : 'text-white'}`}>
                     {q.quest?.title || 'Objective'}
                   </h4>
-                  <p className="text-[8px] text-slate-500 uppercase font-black line-clamp-1">
+                  <p className="text-[10px] text-slate-400 truncate mt-0.5">
                     {isNoticeActive ? (
-                      <span className="text-green-400 font-bold">{claimedNotice.text}</span>
+                      <span className="text-[#7be4d5] font-semibold">{claimedNotice.text}</span>
                     ) : (
                       q.quest?.description || ''
                     )}
@@ -143,7 +137,7 @@ export default function WeeklyQuests() {
                 </div>
 
                 {q.isClaimed ? (
-                  <div className="flex items-center gap-1 text-green-500 font-bold text-[10px]">
+                  <div className="flex items-center gap-1 text-emerald-400 font-bold text-xs">
                     <CheckCircle2 size={16} />
                   </div>
                 ) : canClaim ? (
@@ -154,36 +148,35 @@ export default function WeeklyQuests() {
                       e.stopPropagation();
                       handleClaim(q);
                     }} 
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-xl text-[9px] font-black uppercase shadow-lg animate-bounce cursor-pointer flex items-center gap-1 transition-transform"
+                    className="bg-[#7be4d5] text-black px-3 py-1 rounded-lg text-[10px] font-bold uppercase shadow-md animate-bounce cursor-pointer flex items-center gap-1 transition"
                   >
                     {isThisClaiming ? (
                       <Loader2 size={12} className="animate-spin" />
                     ) : (
                       <>
-                        <Sparkles size={10} />
-                        Claim
+                        <Sparkles size={11} /> Claim
                       </>
                     )}
                   </button>
                 ) : (
-                  <div className="flex items-center gap-1 text-blue-400 font-black text-[10px]">
-                    +{q.quest?.rewardValue || 0} <Zap size={10} />
+                  <div className="flex items-center gap-1 text-[#7be4d5] font-bold text-xs">
+                    +{q.quest?.rewardValue || 0} <Zap size={11} className="fill-current" />
                   </div>
                 )}
               </div>
 
               {!q.isClaimed && (
-                <div className="space-y-2 mt-4">
-                  <div className="flex justify-between text-[8px] font-black uppercase text-slate-500">
+                <div className="space-y-1.5 mt-3">
+                  <div className="flex justify-between text-[10px] font-medium text-slate-400">
                     <span>{progress >= 100 ? 'Ready to Claim' : 'Progress'}</span>
                     <span>{current}/{goal}</span>
                   </div>
-                  <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-[#152328] rounded-full overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-700 ${
+                      className={`h-full transition-all duration-500 ${
                         progress >= 100 
-                          ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' 
-                          : 'bg-blue-600'
+                          ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' 
+                          : 'bg-[#7be4d5]'
                       }`} 
                       style={{ width: `${progress}%` }} 
                     />

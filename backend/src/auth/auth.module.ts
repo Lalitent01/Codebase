@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
@@ -12,12 +13,23 @@ import { PrismaService } from '../prisma.service';
 
 @Module({
   imports: [
+    ConfigModule,
     UsersModule,
     AnalyticsModule,
     PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'fallbackSecret',
-      signOptions: { expiresIn: '7d' },
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const secret = configService.get<string>('JWT_SECRET');
+        if (!secret) {
+          throw new Error('CRITICAL: JWT_SECRET environment variable is missing.');
+        }
+        return {
+          secret,
+          signOptions: { expiresIn: '7d' },
+        };
+      },
     }),
   ],
   providers: [
@@ -25,7 +37,7 @@ import { PrismaService } from '../prisma.service';
     JwtStrategy,
     GoogleStrategy,
     EmailService,
-    PrismaService, // Required by AuthService
+    PrismaService,
   ],
   controllers: [AuthController],
   exports: [AuthService],

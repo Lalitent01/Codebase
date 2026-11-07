@@ -5,8 +5,8 @@ import Sidebar from '@/components/Sidebar';
 import api from '@/lib/axios';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
-import Script from 'next/script'; // FIX: Required to load Razorpay SDK
-import { Check, Moon, Sun, Calendar, Wallet, Sparkles, Loader2 } from 'lucide-react';
+import Script from 'next/script';
+import { Check, Moon, Sun, Calendar, Sparkles, Loader2, Zap } from 'lucide-react';
 
 export default function PricingPage() {
   const { user, fetchUser } = useAuthStore();
@@ -28,19 +28,19 @@ export default function PricingPage() {
 
   const handlePurchase = async (planId: string) => {
     if (!user) {
-      alert('Please log in to proceed with your purchase.');
+      alert('Please sign in to upgrade your account.');
       router.push('/auth/login?redirect=/pricing');
       return;
     }
 
     if (!user.isEmailVerified) {
-      alert('Please verify your email before making purchases.');
+      alert('Please confirm your email address before making a purchase.');
       router.push('/dashboard');
       return;
     }
 
     if (typeof (window as any).Razorpay === 'undefined') {
-      alert('Payment engine is still initializing. Please try again in a few seconds.');
+      alert('Payment engine is initializing. Please try again in 3 seconds.');
       return;
     }
 
@@ -50,20 +50,18 @@ export default function PricingPage() {
       const orderRes = await api.post('/payments/create-order', { planId });
       const order = orderRes.data;
 
-      // Ensure key is read properly (checks both NEXT_PUBLIC_ and fallback)
       const razorpayKey = 
-        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_T8cXYYnPuRbX8t';
+        order.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_Tx9wyVWXnb89gO';
 
       const options = {
         key: razorpayKey,
         amount: order.amount,
         currency: order.currency || 'INR',
         name: 'Suroor AI',
-        description: 'Neural Energy Recharge',
-        order_id: order.id,
+        description: `Upgrade to ${order.planName || 'Premium Pass'}`,
+        order_id: order.orderId || order.id,
         handler: async function (response: any) {
           try {
-            // Secure verification: planId is not trusted on client, verified via orderId
             const verifyRes = await api.post('/payments/verify', {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
@@ -71,17 +69,18 @@ export default function PricingPage() {
             });
             
             if (verifyRes.data.success) {
-              alert('Payment Successful! Energy credits activated.');
+              alert('Payment Successful! Your pass and sparks are now active.');
               if (fetchUser) await fetchUser(); 
               router.push('/dashboard');
             }
           } catch {
-            alert('Payment verification failed. If your account was debited, please contact support.');
+            alert('Payment verification failed. If your account was debited, please contact support@suroor.cc.');
           } finally {
             setPurchasingPlanId(null);
           }
         },
         modal: {
+          confirm_close: true,
           ondismiss: function () {
             setPurchasingPlanId(null);
           },
@@ -90,7 +89,7 @@ export default function PricingPage() {
           name: user.username,
           email: user.email,
         },
-        theme: { color: '#2563eb' }, 
+        theme: { color: '#7be4d5' },
       };
 
       const rzp = new (window as any).Razorpay(options);
@@ -112,9 +111,9 @@ export default function PricingPage() {
 
   if (loading) {
     return (
-      <div className="bg-black min-h-screen text-white flex flex-col items-center justify-center font-mono gap-3 uppercase tracking-[0.2em]">
-        <Loader2 size={36} className="animate-spin text-blue-500" />
-        <p className="animate-pulse text-xs">Syncing_Economy_Grid...</p>
+      <div className="bg-[#030708] min-h-screen text-white flex flex-col items-center justify-center gap-3">
+        <Loader2 size={36} className="animate-spin text-[#7be4d5]" />
+        <p className="text-xs uppercase tracking-widest font-semibold text-slate-400">Loading Pricing & Passes...</p>
       </div>
     );
   }
@@ -122,30 +121,29 @@ export default function PricingPage() {
   const hasActivePass = Boolean(user?.passExpiry && new Date(user.passExpiry) > new Date());
 
   return (
-    <div className="flex min-h-screen bg-[#050505] text-white">
-      {/* Load Razorpay Checkout Script */}
+    <div className="flex min-h-screen bg-[#030708] text-white">
       <Script 
         src="https://checkout.razorpay.com/v1/checkout.js" 
         strategy="lazyOnload" 
       />
 
       <Sidebar />
-      <main className="flex-1 p-6 lg:p-12 overflow-y-auto pb-20">
+      <main className="flex-1 p-6 lg:p-12 overflow-y-auto pb-24">
         <header className="mb-12 text-center max-w-2xl mx-auto">
-          <h1 className="text-4xl font-black italic tracking-tighter uppercase mb-4 text-blue-500">
-            Neural Marketplace
+          <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-3 text-white">
+            Unlimited Hinglish Roleplay
           </h1>
-          <p className="text-slate-500 text-sm font-bold uppercase tracking-widest leading-relaxed">
-            Choose your connection tier. Passes provide unlimited messaging with enhanced bursts.
+          <p className="text-slate-400 text-xs md:text-sm leading-relaxed">
+            Upgrade your conversation depth. Passes provide unlimited messaging, long-term memory recall, and priority generation via UPI or Cards.
           </p>
         </header>
 
         {/* TIME PASSES */}
         {timePasses.length > 0 && (
-          <section className="mb-20">
-            <div className="flex items-center gap-3 mb-8">
-              <Sparkles className="text-blue-500" size={24} />
-              <h2 className="text-xl font-black italic uppercase tracking-tight">Time Passes (Unlimited)</h2>
+          <section className="mb-16 max-w-5xl mx-auto">
+            <div className="flex items-center gap-2.5 mb-6">
+              <Sparkles className="text-[#7be4d5]" size={20} />
+              <h2 className="text-lg font-bold uppercase tracking-wider text-white">Time Passes (Unlimited Chatting)</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {timePasses.map((pass) => (
@@ -155,40 +153,39 @@ export default function PricingPage() {
                   onBuy={() => handlePurchase(pass.id)}
                   disabled={hasActivePass || purchasingPlanId === pass.id}
                   isPurchasing={purchasingPlanId === pass.id}
-                  icon={pass.name.toLowerCase().includes('night') ? <Moon /> : pass.name.toLowerCase().includes('daily') ? <Sun /> : <Calendar />}
-                  color="border-blue-500/30"
+                  icon={pass.name.toLowerCase().includes('night') ? <Moon size={20} /> : pass.name.toLowerCase().includes('daily') ? <Sun size={20} /> : <Calendar size={20} />}
                 />
               ))}
             </div>
           </section>
         )}
 
-        {/* WALLET PACKS */}
+        {/* SPARK RECHARGES */}
         {walletPacks.length > 0 && (
-          <section>
-            <div className="flex items-center gap-3 mb-8">
-              <Wallet className="text-yellow-500" size={24} />
-              <h2 className="text-xl font-black italic uppercase tracking-tight">Energy Vaults (One-Time)</h2>
+          <section className="max-w-5xl mx-auto">
+            <div className="flex items-center gap-2.5 mb-6">
+              <Zap className="text-amber-400" size={20} />
+              <h2 className="text-lg font-bold uppercase tracking-wider text-white">Spark Recharges (One-Time Boosts)</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {walletPacks.map((pack) => (
                 <div 
                   key={pack.id} 
-                  className="bg-[#111318] border border-white/5 p-6 rounded-3xl hover:border-yellow-500/30 transition-all flex flex-col items-center text-center group shadow-xl"
+                  className="bg-[#0a1013] border border-white/[0.06] p-6 rounded-3xl hover:border-[#7be4d5]/30 transition-all flex flex-col items-center text-center group shadow-xl"
                 >
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{pack.name}</p>
-                  <p className="text-2xl font-black text-white mb-4">₹{pack.price}</p>
-                  <div className="space-y-1 mb-6 flex-1">
-                    <p className="text-xs font-bold text-slate-300">{pack.totalMessages || 0} Messages</p>
-                    <p className="text-[10px] text-yellow-500 font-black uppercase">{pack.enhancedMessages || 0} Enhanced</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{pack.name}</p>
+                  <p className="text-2xl font-black text-white mb-3">₹{pack.price}</p>
+                  <div className="space-y-1 mb-6 flex-1 text-xs">
+                    <p className="text-slate-300 font-medium">{pack.totalMessages || 0} Messages</p>
+                    <p className="text-amber-400 font-semibold">{pack.enhancedMessages || 0} Priority Bursts</p>
                   </div>
                   <button 
                     type="button"
                     disabled={purchasingPlanId === pack.id}
                     onClick={() => handlePurchase(pack.id)}
-                    className="w-full py-2.5 bg-white/5 group-hover:bg-yellow-600 group-hover:text-black rounded-xl text-[10px] font-black uppercase transition-all disabled:opacity-50 cursor-pointer"
+                    className="w-full py-2.5 bg-white/5 group-hover:bg-[#7be4d5] group-hover:text-black rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer"
                   >
-                    {purchasingPlanId === pack.id ? 'Connecting...' : 'Deploy Energy'}
+                    {purchasingPlanId === pack.id ? 'Connecting...' : 'Get Sparks'}
                   </button>
                 </div>
               ))}
@@ -200,30 +197,30 @@ export default function PricingPage() {
   );
 }
 
-function PlanCard({ plan, onBuy, icon, color, disabled, isPurchasing }: any) {
+function PlanCard({ plan, onBuy, icon, disabled, isPurchasing }: any) {
   return (
-    <div className={`bg-[#111318] border-2 ${color} p-8 rounded-[2.5rem] relative flex flex-col h-full shadow-2xl transition-all ${
-      disabled ? 'opacity-80' : 'hover:scale-[1.02]'
+    <div className={`bg-[#0a1013] border border-white/[0.08] p-8 rounded-3xl relative flex flex-col h-full shadow-xl transition-all ${
+      disabled ? 'opacity-70' : 'hover:border-[#7be4d5]/40 hover:-translate-y-1'
     }`}>
       <div className="flex justify-between items-start mb-6">
-        <div className="p-3 bg-blue-600/10 rounded-2xl text-blue-500">{icon}</div>
+        <div className="p-3 bg-[#7be4d5]/10 rounded-2xl text-[#7be4d5]">{icon}</div>
         <div className="text-right">
-          <p className="text-2xl font-black">₹{plan.price}</p>
-          <p className="text-[10px] text-slate-500 font-bold uppercase">{plan.durationHours} Hours</p>
+          <p className="text-2xl font-black text-white">₹{plan.price}</p>
+          <p className="text-[10px] text-slate-400 font-bold uppercase">{plan.durationHours} Hours Validity</p>
         </div>
       </div>
       
-      <h3 className="text-xl font-black uppercase italic mb-2 tracking-tighter">{plan.name}</h3>
+      <h3 className="text-lg font-bold text-white mb-2">{plan.name}</h3>
       
-      <ul className="space-y-3 mb-8 flex-1">
-        <li className="flex items-center gap-2 text-xs font-bold text-slate-300">
-          <Check size={14} className="text-blue-500" /> Unlimited Messages
+      <ul className="space-y-2.5 mb-8 flex-1 text-xs text-slate-300">
+        <li className="flex items-center gap-2">
+          <Check size={14} className="text-[#7be4d5]" /> Unlimited Roleplay Messages
         </li>
-        <li className="flex items-center gap-2 text-xs font-bold text-slate-300">
-          <Check size={14} className="text-blue-500" /> {plan.enhancedMessages} Smart Quota
+        <li className="flex items-center gap-2">
+          <Check size={14} className="text-[#7be4d5]" /> {plan.enhancedMessages} High-Fidelity Generations
         </li>
-        <li className="flex items-center gap-2 text-xs font-bold text-slate-300">
-          <Check size={14} className="text-blue-500" /> Priority Model Routing
+        <li className="flex items-center gap-2">
+          <Check size={14} className="text-[#7be4d5]" /> Priority Model Latency
         </li>
       </ul>
 
@@ -231,13 +228,13 @@ function PlanCard({ plan, onBuy, icon, color, disabled, isPurchasing }: any) {
         type="button"
         onClick={onBuy}
         disabled={disabled}
-        className={`w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all ${
+        className={`w-full py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider transition-all cursor-pointer ${
           disabled 
             ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
-            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg active:scale-95 cursor-pointer'
+            : 'bg-[#7be4d5] hover:bg-[#6bd6c7] text-black shadow-md shadow-[#7be4d5]/10 active:scale-95'
         }`}
       >
-        {isPurchasing ? 'Initializing Gateway...' : disabled ? 'PASS ACTIVE' : 'Activate Pass'}
+        {isPurchasing ? 'Opening Gateway...' : disabled ? 'Pass Currently Active' : 'Activate Pass'}
       </button>
     </div>
   );

@@ -13,11 +13,11 @@ describe('AuthService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        { provide: UsersService, useValue: {} },
-        { provide: JwtService, useValue: {} },
-        { provide: AnalyticsService, useValue: {} },
-        { provide: PrismaService, useValue: {} },
-        { provide: EmailService, useValue: {} },
+        { provide: UsersService, useValue: { findOneByEmail: jest.fn(), create: jest.fn() } },
+        { provide: JwtService, useValue: { sign: jest.fn(() => 'jwt_token') } },
+        { provide: AnalyticsService, useValue: { track: jest.fn(), heartbeat: jest.fn() } },
+        { provide: PrismaService, useValue: { user: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() } } },
+        { provide: EmailService, useValue: { sendVerificationEmail: jest.fn(), sendPasswordResetEmail: jest.fn() } },
       ],
     }).compile();
 
